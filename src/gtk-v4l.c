@@ -154,6 +154,7 @@ void menu_control_changed_cb (GtkWidget *wid, gpointer user_data)
 
 void v4l2_add_menu_control (struct v4l2_queryctrl ctrl, struct v4l2_control c, gboolean advanced)
 {
+	GtkWidget *label,*combo,*align;
 	int k;	
 	curr_controls++;
 	combo = gtk_combo_box_new_text();
@@ -175,19 +176,19 @@ void v4l2_add_menu_control (struct v4l2_queryctrl ctrl, struct v4l2_control c, g
 	label = gtk_label_new ((gchar *)ctrl.name);
 	gtk_misc_set_alignment (GTK_MISC(label),0.0,0.5);
 
-	align2 = gtk_alignment_new (0.0,0.5,0.0,0.0);
-	gtk_container_add (GTK_CONTAINER(align2), combo);
+	align = gtk_alignment_new (0.0,0.5,0.0,0.0);
+	gtk_container_add (GTK_CONTAINER(align), combo);
 
         if ((advanced == TRUE) && curr_controls > MIN_CONTROLS_ON_MAIN_PAGE) {
                 rownum_advanced++;
                 gtk_table_resize (table2, rownum_advanced, 2);
                 gtk_table_attach (GTK_TABLE(table2), label, 0,1,rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5, 5);
-                gtk_table_attach (GTK_TABLE(table2), align2, 1,2,rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5, 5);
+                gtk_table_attach (GTK_TABLE(table2), align, 1,2,rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5, 5);
         } else {
                 rownum++;
                 gtk_table_resize (table, rownum, 2);
                 gtk_table_attach (GTK_TABLE(table), label, 0,1,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
-                gtk_table_attach (GTK_TABLE(table), align2, 1,2,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
+                gtk_table_attach (GTK_TABLE(table), align, 1,2,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
         }
 
         v4l2_list_add (ctrl.id, c.value,ctrl.default_value);
@@ -196,6 +197,7 @@ void v4l2_add_menu_control (struct v4l2_queryctrl ctrl, struct v4l2_control c, g
 
 void v4l2_add_int_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboolean advanced)
 {	
+	GtkWidget *HScale,*label;
 	curr_controls++;
 	gint min, max, step,def;
 	min = ctrl.minimum; max = ctrl.maximum; step = ctrl.step; def = c.value;
@@ -238,7 +240,7 @@ void v4l2_add_int_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboo
 
 void v4l2_add_button_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboolean advanced)
 {	
-	GtkWidget *button;
+	GtkWidget *button,*label;
 	curr_controls++;
 	
 	button = gtk_button_new_with_label("Reset");
@@ -264,6 +266,7 @@ void v4l2_add_button_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,g
 
 void v4l2_add_bool_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboolean advanced)
 {
+	GtkWidget *check,*label,*align;
 	curr_controls++;
 	gboolean state;
 
@@ -275,19 +278,19 @@ void v4l2_add_bool_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gbo
 	label = gtk_label_new ((const gchar *)ctrl.name);
 	gtk_misc_set_alignment (GTK_MISC(label),0.0,0.5);
 
-        align2 = gtk_alignment_new (0.0,0.5,0.0,0.0);
-        gtk_container_add (GTK_CONTAINER(align2), check);
+        align = gtk_alignment_new (0.0,0.5,0.0,0.0);
+        gtk_container_add (GTK_CONTAINER(align), check);
 
        if ((advanced == TRUE) && curr_controls > MIN_CONTROLS_ON_MAIN_PAGE) {
                 rownum_advanced++;
 		gtk_table_resize (table2, rownum_advanced, 2);
 		gtk_table_attach (GTK_TABLE(table2), label,0,1,rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5,5);
-		gtk_table_attach (GTK_TABLE(table2), align2,1,2, rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5,5);
+		gtk_table_attach (GTK_TABLE(table2), align,1,2, rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5,5);
 		} else {
 		rownum++;
 	        gtk_table_resize (table, rownum, 2);
 	        gtk_table_attach (GTK_TABLE(table), label, 0,1,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
-	        gtk_table_attach (GTK_TABLE(table), align2, 1,2,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
+	        gtk_table_attach (GTK_TABLE(table), align, 1,2,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
 	}
 	v4l2_list_add (ctrl.id, state,ctrl.default_value);
 }
@@ -317,6 +320,7 @@ void v4l2_add_control (struct v4l2_queryctrl ctrl, struct v4l2_control c,gboolea
 void v4l2_add_header ()
 {
 	const char *driver, *card, *bus_info;
+	GtkWidget *sep,*label,*align;
 
 	driver = (const char *)cap.driver;
 	card = (const char *)cap.card;

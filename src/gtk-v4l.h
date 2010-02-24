@@ -41,11 +41,9 @@
 #define MIN_CONTROLS_ON_MAIN_PAGE 6
 #define ICON_LOC "/usr/share/icons/gnome/24x24/devices/camera-web.png"
 
-GtkWidget *window, *label, *HScale, *check;
-GtkWidget *advanced_window;
+GtkWidget *window,*advanced_window;
 GtkTable *table,*table2=NULL;
-GtkWidget *content_area,*align, *sep,*content_area2;
-GtkWidget *align1, *align2,*combo, *tag;
+GtkWidget *content_area,*content_area2;
 gchar *device = NULL;
 
 gboolean expanded=FALSE;

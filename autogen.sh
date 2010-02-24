@@ -16,7 +16,7 @@ REQUIRED_AUTOMAKE_VERSION=1.9
 
 (cd $srcdir;
     autoreconf --install --symlink &&
-    ./configure --enable-maintainer-mode $@
+    ./configure $@
 )
 
 
