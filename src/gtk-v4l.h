@@ -73,7 +73,7 @@ gboolean started_cb=FALSE;
 void v4l2_list_add (__u32 id, __s32 value,__s32 def);
 gboolean v4l2_list_edit_element (__u32 id, __s32 value);
 void v4l2_list_print(void); /*Used only for debugging */
-void v4l2_list_reset(void);
+void v4l2_list_destroy(void);
 void v4l2_reset_list_to_default();
 
 
@@ -96,7 +96,7 @@ void v4l2_add_int_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboo
 void v4l2_add_bool_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboolean advanced);
 void v4l2_add_control (struct v4l2_queryctrl ctrl, struct v4l2_control c,gboolean advanced);
 void v4l2_add_header (void);
-void v4l2_show_control_panel (void);
+void v4l2_control_panel_create (void);
 void v4l2_add_footer (gboolean advanced);
 void v4l2_add_dialog_buttons(void);
 
