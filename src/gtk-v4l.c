@@ -432,7 +432,7 @@ void v4l2_reset_defaults(void)
 
 	gtk_widget_destroy(GTK_WIDGET(table));
 	curr_controls=0;
-	v4l2_show_control_panel();
+	v4l2_control_panel_create();
 	gtk_widget_show_all(GTK_WIDGET(table));
 
 }
@@ -572,7 +572,7 @@ void v4l2_load_from_driver (int fd, gboolean advanced)
 	}
 }
 
-void v4l2_show_control_panel (void)
+void v4l2_control_panel_create (void)
 {
 	rownum=4;
 	controls = v4l2_count_controls();
@@ -673,7 +673,7 @@ int main(int argc, char *argv[])
   
   gtk_container_set_border_width (GTK_CONTAINER(window),7);
 
-  v4l2_show_control_panel();
+  v4l2_control_panel_create();
 
   v4l2_add_dialog_buttons();
   g_signal_connect(G_OBJECT(window),"destroy", G_CALLBACK(destroy), NULL);
