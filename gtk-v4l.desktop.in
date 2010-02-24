@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Video4Linux Device Preferences
+GenericName=Video4Linux Preferences GTK app
+Comment=Change Video4Linux Preferences
+Exec=gtk-v4l
+Terminal=false
+Type=Application
+StartupNotify=true
+Icon=camera-web
+Categories=GNOME;Application;AudioVideo;Video;

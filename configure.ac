@@ -36,5 +36,6 @@ AC_SUBST([AM_LDFLAGS])
 AC_CHECK_FUNCS([strerror])
 
 AC_CONFIG_FILES([Makefile
-		src/Makefile])
+		src/Makefile
+		gtk-v4l.desktop])
 AC_OUTPUT
