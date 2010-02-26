@@ -61,6 +61,8 @@ struct v4l2_property {
 	__u32 id;
 	__s32 value;
 	__s32 def;
+	GtkWidget *w;
+	int ctrl_type;
 };
 
 struct v4l2_capability cap;
@@ -70,7 +72,7 @@ int curr_controls=0;
 gboolean started_cb=FALSE;
 
 /* Functions to manage lists */
-void v4l2_list_add (__u32 id, __s32 value,__s32 def);
+void v4l2_list_add (__u32 id, __s32 value,__s32 def,GtkWidget *w, int ctrl_type);
 gboolean v4l2_list_edit_element (__u32 id, __s32 value);
 void v4l2_list_print(void); /*Used only for debugging */
 void v4l2_list_destroy(void);

@@ -56,11 +56,13 @@ void button_control_changed_cb (GtkButton *button, gpointer user_data)
 		g_warning("Error writting button value to the driver");
 }
 
-void v4l2_list_add (__u32 id, __s32 value, __s32 def)
+void v4l2_list_add (__u32 id, __s32 value, __s32 def, GtkWidget *w, int ctrl_type)
 {
 	struct v4l2_property* temp;
 	temp = g_malloc (sizeof (struct v4l2_property));
 	temp->id = id; temp->value = value; temp->def = def;
+	temp->w = w;
+	temp->ctrl_type = ctrl_type;
 	list = g_list_append (list, (gpointer) temp);
 }
 
@@ -108,7 +110,23 @@ void v4l2_reset_list_to_default(void)
 	for (l=list;l;l=l->next) {
 		s=l->data;
 		s->value = s->def;
-		v4l2_write_to_driver_one(s->id,s->value,FALSE);	
+		if (v4l2_write_to_driver_one(s->id,s->value,FALSE) == EXIT_SUCCESS) {
+			switch(s->ctrl_type) {
+				case V4L2_CTRL_TYPE_INTEGER:
+					gtk_range_set_value(GTK_RANGE(s->w),s->value);
+					break;
+				case V4L2_CTRL_TYPE_BOOLEAN:
+					gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(s->w),s->value);
+					break;
+				case V4L2_CTRL_TYPE_MENU:
+					gtk_combo_box_set_active(GTK_COMBO_BOX(s->w),s->value);
+					break;
+				case V4L2_CTRL_TYPE_BUTTON:
+					// do nothing
+					break;
+			}
+		}
+			
 	}
 }
 
@@ -191,7 +209,7 @@ void v4l2_add_menu_control (struct v4l2_queryctrl ctrl, struct v4l2_control c, g
                 gtk_table_attach (GTK_TABLE(table), align, 1,2,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
         }
 
-        v4l2_list_add (ctrl.id, c.value,ctrl.default_value);
+        v4l2_list_add (ctrl.id, c.value,ctrl.default_value,GTK_WIDGET(combo),V4L2_CTRL_TYPE_MENU);
 
 }
 
@@ -235,7 +253,7 @@ void v4l2_add_int_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboo
 
 	}
 
-	v4l2_list_add (ctrl.id, def,ctrl.default_value);
+	v4l2_list_add (ctrl.id, def,ctrl.default_value,GTK_WIDGET(HScale),V4L2_CTRL_TYPE_INTEGER);
 }
 
 void v4l2_add_button_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboolean advanced)
@@ -292,7 +310,7 @@ void v4l2_add_bool_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gbo
 	        gtk_table_attach (GTK_TABLE(table), label, 0,1,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
 	        gtk_table_attach (GTK_TABLE(table), align, 1,2,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
 	}
-	v4l2_list_add (ctrl.id, state,ctrl.default_value);
+	v4l2_list_add (ctrl.id, state,ctrl.default_value,GTK_WIDGET(check),V4L2_CTRL_TYPE_BOOLEAN);
 }
 
 void v4l2_add_control (struct v4l2_queryctrl ctrl, struct v4l2_control c,gboolean advanced)
@@ -395,7 +413,7 @@ int v4l2_count_controls(void)
 			if(v4l2_ioctl(fd, VIDIOC_G_CTRL, &c)==0) {
 				if ((ctrl.type == V4L2_CTRL_TYPE_INTEGER) || 
 				     (ctrl.type == V4L2_CTRL_TYPE_BOOLEAN))
-					k++;
+					j++;
 			} 
 	
 		}
@@ -411,7 +429,7 @@ int v4l2_count_controls(void)
 		if(v4l2_ioctl(fd, VIDIOC_G_CTRL, &c)==0) {
 			if ((ctrl.type == V4L2_CTRL_TYPE_INTEGER) || 
 			     (ctrl.type == V4L2_CTRL_TYPE_BOOLEAN))
-				m++;
+				j++;
 			}
 
 		} else {
@@ -428,12 +446,12 @@ void v4l2_reset_defaults(void)
 	v4l2_list_print();	
 	g_warning("defaults");
 
-	expanded = gtk_expander_get_expanded(GTK_EXPANDER(advanced_window));
+//	expanded = gtk_expander_get_expanded(GTK_EXPANDER(advanced_window));
 
-	gtk_widget_destroy(GTK_WIDGET(table));
-	curr_controls=0;
-	v4l2_control_panel_create();
-	gtk_widget_show_all(GTK_WIDGET(table));
+//	gtk_widget_destroy(GTK_WIDGET(table));
+//	curr_controls=0;
+//	v4l2_control_panel_create();
+//	gtk_widget_show_all(GTK_WIDGET(table));
 
 }
 
@@ -581,6 +599,7 @@ void v4l2_control_panel_create (void)
 
 	gtk_expander_set_expanded(GTK_EXPANDER(advanced_window),expanded);
 	v4l2_add_header();
+	fprintf(stderr, "controls = %d", controls);
 	if (controls > MAX_CONTROLS_ON_MAIN_PAGE) {
 		table2 = GTK_TABLE(gtk_table_new(rownum_advanced, 3, FALSE));
 		gtk_container_add (GTK_CONTAINER(advanced_window), GTK_WIDGET(table2));
