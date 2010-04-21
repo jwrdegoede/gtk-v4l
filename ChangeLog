@@ -7,3 +7,6 @@ Version 0.1
 
 * Feb 26 2010
 - Change the reset function so that gui is not reloaded.
+
+* Apr 21 2010
+- Add graphical error dialog

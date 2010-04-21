@@ -1,5 +1,7 @@
 bin_PROGRAMS = gtk-v4l
-gtk_v4l_SOURCES = gtk-v4l.c gtk-v4l.h
+gtk_v4l_SOURCES = gtk-v4l.c \
+		  gtk-v4l.h \
+		  error_dialog.c 
 
 gtk_v4l_CFLAGS = \
         $(GTK_CFLAGS)        \

@@ -648,10 +648,9 @@ void v4l2_add_dialog_buttons(void)
 }
 int main(int argc, char *argv[])
 {
-//  gchar *device;// = "/dev/video0
-//  gint dialog_result;
   GError *error = NULL;
   GdkPixbuf *icon_pixbuf = NULL;
+  gchar *error_string;
 
   GOptionContext* context = g_option_context_new("- Gtk V4l app");
   g_option_context_add_main_entries (context,entries, NULL);
@@ -665,12 +664,16 @@ int main(int argc, char *argv[])
   fd = v4l2_open(device, O_RDWR, 0);
 
   if(fd < 0) {
-      g_warning ("Could not open device : %s",device);
+      error_string = g_strdup_printf ("Could not open device : %s", device );
+      show_error_dialog (error_string);
+      g_free (error_string);
       return EXIT_FAILURE;
   }
 
   if(v4l2_ioctl(fd, VIDIOC_QUERYCAP, &cap) == -1) {
-	g_warning ("Could not access /dev/video0");
+	error_string = g_strdup_printf ("Could not access : %s", device );
+	show_error_dialog (error_string);
+	g_free (error_string);
 	return EXIT_FAILURE;
   }
 
