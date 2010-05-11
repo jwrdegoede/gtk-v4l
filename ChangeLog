@@ -10,3 +10,6 @@ Version 0.1
 
 * Apr 21 2010
 - Add graphical error dialog
+
+* May 11 2010
+- Add initial udev support

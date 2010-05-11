@@ -36,6 +36,7 @@
 #include <linux/videodev.h>
 #include <gtk/gtk.h>
 #include <libv4l2.h>
+#include <gudev/gudev.h>
 
 #define MAX_CONTROLS_ON_MAIN_PAGE 8
 #define MIN_CONTROLS_ON_MAIN_PAGE 6
@@ -55,7 +56,7 @@ GOptionEntry entries[] =
   };
 
 
-GList *list=NULL;
+GList *list=NULL,*dev_list;
 
 struct v4l2_property {
 	__u32 id;
@@ -64,6 +65,17 @@ struct v4l2_property {
 	GtkWidget *w;
 	int ctrl_type;
 };
+
+struct v4l2_device {
+	const char *device_file;
+	const char *product_name;
+	const char *vendor;
+	const char *product;
+        int vendor_id; 
+        int product_id;
+};
+
+GUdevClient *cam;
 
 struct v4l2_capability cap;
 

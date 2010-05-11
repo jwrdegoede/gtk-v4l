@@ -25,6 +25,7 @@
 void close_cb(GtkWidget *widget, gpointer user_data)
 {
 	v4l2_close(fd);
+	v4l2_device_destroy(cam);
 	gtk_main_quit();
 }
 void destroy(GtkWidget *widget, gpointer user_data)
@@ -651,7 +652,7 @@ int main(int argc, char *argv[])
   GError *error = NULL;
   GdkPixbuf *icon_pixbuf = NULL;
   gchar *error_string;
-
+	
   GOptionContext* context = g_option_context_new("- Gtk V4l app");
   g_option_context_add_main_entries (context,entries, NULL);
   g_option_context_add_group (context, gtk_get_option_group (TRUE));
@@ -680,6 +681,7 @@ int main(int argc, char *argv[])
   
 
   gtk_init (&argc, &argv);
+  cam = v4l2_device_init();
   window = gtk_dialog_new();
   gtk_window_set_title(GTK_WINDOW(window), "GTK V4L Device properties");
   gtk_window_set_resizable (GTK_WINDOW(window), FALSE);
