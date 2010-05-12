@@ -851,6 +851,7 @@ void v4l2_switch_to_new_device(const char *device)
 	/* Close existing descriptor */
 	v4l2_close(fd);
 	v4l2_list_reset();
+	started_cb = FALSE;
 	/* Now open new device and show its properties */
 	fd = v4l2_open(device, O_RDWR, 0);
 	if(fd < 0) 
@@ -877,6 +878,7 @@ void v4l2_switch_to_new_device(const char *device)
 	gtk_widget_destroy(GTK_WIDGET(table));
 	curr_controls=0;
 	v4l2_control_panel_create_properties();
+	started_cb = TRUE;
 	gtk_widget_show_all(GTK_WIDGET(table));
 
 }
