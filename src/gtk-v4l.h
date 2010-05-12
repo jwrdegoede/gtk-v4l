@@ -43,7 +43,7 @@
 #define ICON_LOC "/usr/share/icons/gnome/24x24/devices/camera-web.png"
 
 GtkWidget *window,*advanced_window,*dev_combo;
-GtkTable *table,*table2=NULL;
+GtkTable *main_table,*table,*table2=NULL;
 GtkWidget *content_area,*content_area2;
 
 GtkWidget  *label_driver, *label_card, *label_bus;
@@ -84,6 +84,8 @@ gboolean v4l2_list_edit_element (__u32 id, __s32 value);
 void v4l2_list_print(void); /*Used only for debugging */
 void v4l2_list_destroy(void);
 void v4l2_reset_list_to_default();
+void v4l2_combo_list_print(void);
+
 
 
 /* Functions to talk to the driver */
@@ -91,6 +93,8 @@ int v4l2_count_controls(void);
 int v4l2_write_to_driver(void);
 void v4l2_load_from_driver (int fd, gboolean advanced);
 int v4l2_write_to_driver_one(__u32 id,__u32 value, gboolean toggle);
+void v4l2_switch_to_new_device(const char *device);
+
 
 /* Callbacks */
 void close_cb(GtkWidget *widget, gpointer user_data);

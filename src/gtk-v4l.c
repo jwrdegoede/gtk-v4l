@@ -362,60 +362,60 @@ void v4l2_add_header_init ()
 	label = gtk_label_new ("Device");
         align = gtk_alignment_new (0.0,0.5,0.0,0.0);
         gtk_container_add (GTK_CONTAINER(align), label);
-        gtk_table_attach (GTK_TABLE(table), align, 0,1,0,1,GTK_FILL,GTK_FILL,5,5);//, GTK_EXPAND, GTK_SHRINK, 5, 5);    
+        gtk_table_attach (GTK_TABLE(main_table), align, 0,1,0,1,GTK_FILL,GTK_FILL,5,5);//, GTK_EXPAND, GTK_SHRINK, 5, 5);    
 
 
         align = gtk_alignment_new (0.0,0.5,0.0,0.0);
         gtk_container_add (GTK_CONTAINER(align), dev_combo);
-        gtk_table_attach (GTK_TABLE(table), align, 1,2,0,1,GTK_FILL,GTK_FILL,5,5);//, GTK_EXPAND, GTK_SHRINK, 5, 5);    
+        gtk_table_attach (GTK_TABLE(main_table), align, 1,2,0,1,GTK_FILL,GTK_FILL,5,5);//, GTK_EXPAND, GTK_SHRINK, 5, 5);    
 
 	label = gtk_label_new ("Driver");
 	align = gtk_alignment_new (0.0,0.5,0.0,0.0);
 	gtk_container_add (GTK_CONTAINER(align), label);
-	gtk_table_attach (GTK_TABLE(table), align, 0,1,1,2,GTK_FILL,GTK_FILL,5,5);//, GTK_EXPAND, GTK_SHRINK, 5, 5);	
+	gtk_table_attach (GTK_TABLE(main_table), align, 0,1,1,2,GTK_FILL,GTK_FILL,5,5);//, GTK_EXPAND, GTK_SHRINK, 5, 5);	
        
 	 
 	label_driver = gtk_label_new ("");
 	align = gtk_alignment_new (0.0,0.5,0.0,0.0);
         gtk_container_add (GTK_CONTAINER(align), label_driver);
-        gtk_table_attach (GTK_TABLE(table), align, 1,2,1,2, GTK_FILL, GTK_FILL, 5, 5);
+        gtk_table_attach (GTK_TABLE(main_table), align, 1,2,1,2, GTK_FILL, GTK_FILL, 5, 5);
 
         label = gtk_label_new ("Card");
         align = gtk_alignment_new (0.0,0.5,0.0,0.0);
         gtk_container_add (GTK_CONTAINER(align), label);
-        gtk_table_attach (GTK_TABLE(table), align, 0,1,2,3, GTK_FILL, GTK_FILL, 5, 5);
+        gtk_table_attach (GTK_TABLE(main_table), align, 0,1,2,3, GTK_FILL, GTK_FILL, 5, 5);
 
         label_card = gtk_label_new ("");
         align = gtk_alignment_new (0.0,0.5,0.0,0.0);
         gtk_container_add (GTK_CONTAINER(align), label_card);
-        gtk_table_attach (GTK_TABLE(table), align, 1,2,2,3, GTK_FILL, GTK_FILL, 5, 5);
+        gtk_table_attach (GTK_TABLE(main_table), align, 1,2,2,3, GTK_FILL, GTK_FILL, 5, 5);
 
         label = gtk_label_new ("Bus Information");
         align = gtk_alignment_new (0.0,0.5,0.0,0.0);
         gtk_container_add (GTK_CONTAINER(align), label);
-        gtk_table_attach (GTK_TABLE(table), align, 0,1,3,4, GTK_FILL, GTK_FILL, 5, 5);
+        gtk_table_attach (GTK_TABLE(main_table), align, 0,1,3,4, GTK_FILL, GTK_FILL, 5, 5);
 
         label_bus = gtk_label_new ("");
         align = gtk_alignment_new (0.0,0.5,0.0,0.0);
         gtk_container_add (GTK_CONTAINER(align), label_bus);
-        gtk_table_attach (GTK_TABLE(table), align, 1,2,3,4, GTK_FILL, GTK_FILL, 5, 5);
+        gtk_table_attach (GTK_TABLE(main_table), align, 1,2,3,4, GTK_FILL, GTK_FILL, 5, 5);
 	
 	sep = gtk_hseparator_new();
-	gtk_table_attach (GTK_TABLE(table), sep, 0,4,4,5, GTK_FILL, GTK_FILL, 0, 0);
+	gtk_table_attach (GTK_TABLE(main_table), sep, 0,4,4,5, GTK_FILL, GTK_FILL, 0, 0);
 	
 }
 
 void
 v4l2_add_header_populate()
 {
-	const char *driver, *card, *bus_info;
-	driver = (const char *)cap.driver;
-	card = (const char *)cap.card;
-	bus_info = (const char *)cap.bus_info;
+	gchar *driver, *card, *bus_info;
+	driver = (gchar *)cap.driver;
+	card = (gchar *)cap.card;
+	bus_info = (gchar *)cap.bus_info;
 	
-	gtk_label_set_text(label_driver, driver);
-	gtk_label_set_text(label_card, card);
-	gtk_label_set_text(label_bus,bus_info);	
+	gtk_label_set_text(GTK_LABEL(label_driver), driver);
+	gtk_label_set_text(GTK_LABEL(label_card), card);
+	gtk_label_set_text(GTK_LABEL(label_bus),bus_info);	
 }
 
 int v4l2_count_controls(void)
@@ -628,16 +628,15 @@ void v4l2_load_from_driver (int fd, gboolean advanced)
 	}
 }
 
-void v4l2_control_panel_create (void)
+void v4l2_control_panel_create_properties(void)
 {
-	rownum=5;
 	controls = v4l2_count_controls();
-	table = GTK_TABLE(gtk_table_new (rownum,3,FALSE));
 	advanced_window = gtk_expander_new("More properties");
 
 	gtk_expander_set_expanded(GTK_EXPANDER(advanced_window),expanded);
-	v4l2_add_header_init();
-	v4l2_add_header_populate();
+
+	table = GTK_TABLE(gtk_table_new(1,3,FALSE));
+
 	fprintf(stderr, "controls = %d", controls);
 	if (controls > MAX_CONTROLS_ON_MAIN_PAGE) {
 		table2 = GTK_TABLE(gtk_table_new(rownum_advanced, 3, FALSE));
@@ -646,18 +645,28 @@ void v4l2_control_panel_create (void)
 		v4l2_load_from_driver (fd,TRUE);
 		v4l2_add_footer (TRUE);
 
-//		gtk_table_set_row_spacings (table2, 3);
-//		gtk_table_set_col_spacings (table2, 3);
 	} else {
 		v4l2_load_from_driver (fd, FALSE);
 		v4l2_add_footer (FALSE);			
 		}
 
-	gtk_container_add (GTK_CONTAINER(content_area),GTK_WIDGET(table));
+	
 
-//	gtk_table_set_row_spacings (table, 3);
-//	gtk_table_set_col_spacings (table, 3);
-//	v4l2_list_print();	
+        gtk_table_attach (GTK_TABLE(main_table),GTK_WIDGET(table), 0,2,rownum, rownum+1,GTK_FILL, GTK_FILL, 0, 5);
+	
+}
+
+void v4l2_control_panel_create (void)
+{
+	rownum=5;
+	main_table = GTK_TABLE(gtk_table_new (rownum,3,FALSE));
+	v4l2_add_header_init();
+	v4l2_add_header_populate();
+
+	v4l2_control_panel_create_properties();
+	
+	gtk_container_add (GTK_CONTAINER(content_area),GTK_WIDGET(main_table));
+
 }
 
 void v4l2_add_footer (gboolean advanced)
@@ -698,12 +707,12 @@ v4l2_combo_init(void)
 	for (l=devs;l;l=l->next)
 	{
 		temp = l->data;
-		gtk_combo_box_append_text(GTK_COMBO(dev_combo),temp->product_name);
+		gtk_combo_box_append_text(GTK_COMBO_BOX(dev_combo),temp->product_name);
 		count++;
 		if (!g_strcmp0(devpath, temp->dev_path))
 			current = count;
 	}
-	gtk_combo_box_set_active(GTK_COMBO(dev_combo),current);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(dev_combo),current);
 		
 }
 
@@ -722,14 +731,14 @@ void v4l2_combo_add_device(struct v4l2_device *temp)
 
 	g_warning("Add new name: %s", temp->product_name);
 	devs = g_list_append (devs, (gpointer) new_dev);
-	gtk_combo_box_append_text(GTK_COMBO(dev_combo),new_dev->product_name);
+	gtk_combo_box_append_text(GTK_COMBO_BOX(dev_combo),new_dev->product_name);
 }
 
 void v4l2_combo_remove_device(char *d)
 {
 	GList *l;
         struct v4l2_device *temp;
-	int count=0;
+	int count=0,active;
 	gchar *error_string;
 
 
@@ -761,11 +770,45 @@ void v4l2_combo_remove_device(char *d)
 					// Close current device
 					// For the combo show next/previous option
 					// Open new device show its properties	
-						
+					if (l->next == NULL) 	
+					{
+                                                active = gtk_combo_box_get_active(GTK_COMBO_BOX(dev_combo));
+                                                active--;
+                                                gtk_combo_box_set_active (GTK_COMBO_BOX(dev_combo),active);
+                                                l = l->prev;
+                                                temp = l->data;
+                                                devs = g_list_remove(devs, temp);
+                                                gtk_combo_box_remove_text(GTK_COMBO_BOX(dev_combo),count);
+
+                                                device=(gchar *)temp->device_file;
+                                                devpath=(gchar *)temp->dev_path;
+                                                g_message("chosen new device:%s",temp->product_name);
+
+                                                v4l2_switch_to_new_device(device);
+                                                return;
+
+					} else
+					{
+						active = gtk_combo_box_get_active(GTK_COMBO_BOX(dev_combo));
+						active++;
+						gtk_combo_box_set_active (GTK_COMBO_BOX(dev_combo),active);
+						l = l->next;
+						temp = l->data;
+			                        devs = g_list_remove(devs, temp);
+			                        gtk_combo_box_remove_text(GTK_COMBO_BOX(dev_combo),count);
+
+			                        device=(gchar *)temp->device_file;
+			                        devpath=(gchar *)temp->dev_path;
+			                        g_message("chosen new device:%s",temp->product_name);
+
+			                        v4l2_switch_to_new_device(device);
+						return;
+				
+					}			
 				}
 		
 			}
-			g_list_remove(devs, temp);
+			devs = g_list_remove(devs, temp);
 			gtk_combo_box_remove_text(GTK_COMBO_BOX(dev_combo),count);
 			return;
                 }
@@ -802,6 +845,42 @@ void v4l2_combo_list_print(void)
 	}
 }
 
+void v4l2_switch_to_new_device(const char *device)
+{
+	gchar *error_string;
+	/* Close existing descriptor */
+	v4l2_close(fd);
+	v4l2_list_reset();
+	/* Now open new device and show its properties */
+	fd = v4l2_open(device, O_RDWR, 0);
+	if(fd < 0) 
+	{
+		error_string = g_strdup_printf ("Could not open device : %s", device );
+		show_error_dialog (error_string);
+		g_free (error_string);
+		// TODO: handle this more gracefully
+		exit(1);
+	}
+
+
+	if(v4l2_ioctl(fd, VIDIOC_QUERYCAP, &cap) == -1) 
+	{
+		error_string = g_strdup_printf ("Could not access : %s", device );
+        	show_error_dialog (error_string);
+	        g_free (error_string);
+       		// TODO: handle this more gracefully
+       		exit(1);
+	}
+
+	v4l2_ioctl(fd, VIDIOC_QUERYCAP, &cap);
+	v4l2_add_header_populate();
+	gtk_widget_destroy(GTK_WIDGET(table));
+	curr_controls=0;
+	v4l2_control_panel_create_properties();
+	gtk_widget_show_all(GTK_WIDGET(table));
+
+}
+
 void v4l2_combo_change_device_cb (GtkWidget *wid, gpointer user_data)
 {
 	int active=0,count=0;
@@ -817,12 +896,12 @@ void v4l2_combo_change_device_cb (GtkWidget *wid, gpointer user_data)
 		if (count==active)
 		{	
 			temp = l->data;
-			device=temp->device_file;
-			devpath=temp->dev_path;
+
+			device=(gchar *) temp->device_file;
+			devpath=(gchar *) temp->dev_path;
 			g_message("chosen new device:%s",temp->product_name);
-			fd = v4l2_open(device, O_RDWR, 0);
-			v4l2_ioctl(fd, VIDIOC_QUERYCAP, &cap);
-			v4l2_add_header_populate();
+
+			v4l2_switch_to_new_device(device);
 		}
 		count++;
 	}	
@@ -855,7 +934,7 @@ int main(int argc, char *argv[])
 
   if (device == NULL) // Assume default device
   {
-	if((device=v4l2_device_default()) == NULL) {
+	if((device=(gchar *)v4l2_device_default()) == NULL) {
 		g_warning("device=%s",device);
 		error_string = g_strdup_printf ("No V4L2 device found");
 		show_error_dialog (error_string);
@@ -863,7 +942,7 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
   }
-  devpath = v4l2_device_get_dev_path(device); 
+  devpath = (gchar *)v4l2_device_get_dev_path(device); 
 
   g_warning("devpath=%s",devpath); 
   fd = v4l2_open(device, O_RDWR, 0);

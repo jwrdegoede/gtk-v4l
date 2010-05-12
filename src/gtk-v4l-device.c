@@ -61,18 +61,6 @@ v4l_device_uevent_cb (GUdevClient               *client,
 void
 v4l2_device_removed (const char *devpath)
 {
-/*	GList *l;
-	struct v4l2_device *temp;
-
-	for (l=dev_list;l;l=l->next) {
-		temp = l->data;
-		if (!g_strcmp0(devpath,temp->dev_path)) 
-		{
-			g_warning("We can remove : %s now", temp->device_file);
-			g_list_remove(dev_list, temp);
-			return;
-		}
-	}*/
 	v4l2_combo_remove_device(devpath);
 }
 
