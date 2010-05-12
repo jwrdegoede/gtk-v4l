@@ -42,10 +42,13 @@
 #define MIN_CONTROLS_ON_MAIN_PAGE 6
 #define ICON_LOC "/usr/share/icons/gnome/24x24/devices/camera-web.png"
 
-GtkWidget *window,*advanced_window;
+GtkWidget *window,*advanced_window,*dev_combo;
 GtkTable *table,*table2=NULL;
 GtkWidget *content_area,*content_area2;
-gchar *device = NULL;
+
+GtkWidget  *label_driver, *label_card, *label_bus;
+
+gchar *device = NULL,*devpath = NULL;
 
 gboolean expanded=FALSE;
 
@@ -56,7 +59,7 @@ GOptionEntry entries[] =
   };
 
 
-GList *list=NULL,*dev_list;
+GList *list=NULL;
 
 struct v4l2_property {
 	__u32 id;
@@ -66,14 +69,6 @@ struct v4l2_property {
 	int ctrl_type;
 };
 
-struct v4l2_device {
-	const char *device_file;
-	const char *product_name;
-	const char *vendor;
-	const char *product;
-        int vendor_id; 
-        int product_id;
-};
 
 GUdevClient *cam;
 
