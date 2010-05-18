@@ -25,12 +25,13 @@
 
 void show_error_dialog(const gchar *error)
 {
-	GtkDialog *dialog;
+	GtkWidget *dialog;
 	dialog = gtk_message_dialog_new( NULL,
 					 GTK_DIALOG_DESTROY_WITH_PARENT,
 					 GTK_MESSAGE_ERROR,
-					 GTK_BUTTONS_CLOSE,
+					 GTK_BUTTONS_CLOSE, 
 					 error );
-	gtk_dialog_run (dialog);
-	gtk_widget_destroy (GTK_WIDGET( dialog));
+
+	gtk_dialog_run (GTK_DIALOG(dialog));
+	gtk_widget_destroy ( dialog);
 }

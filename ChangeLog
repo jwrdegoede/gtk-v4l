@@ -13,3 +13,7 @@ Version 0.1
 
 * May 11 2010
 - Add initial udev support
+
+* May 18 2010
+- Finish udev support 
+- Make amd64/ia64 friendly

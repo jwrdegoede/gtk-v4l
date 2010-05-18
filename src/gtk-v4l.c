@@ -23,11 +23,11 @@
 #include "gtk-v4l.h"
 
 struct v4l2_device {
-        const char *device_file;
-        const char *product_name;
-        const char *vendor;
-        const char *product;
-        const char *dev_path;
+        char *device_file;
+        char *product_name;
+        char *vendor;
+        char *product;
+        char *dev_path;
         int vendor_id;
         int product_id;
 	int current_device;
@@ -922,8 +922,8 @@ int main(int argc, char *argv[])
   g_option_context_add_group (context, gtk_get_option_group (TRUE));
   g_option_context_parse (context, &argc, &argv, &error);
 
-  cam = v4l2_device_init();
-  devs = v4l2_device_coldplug(cam);
+  cam = (GUdevClient *)  v4l2_device_init();
+  devs = (GList * ) v4l2_device_coldplug(cam);
   
   v4l2_combo_init();
   g_signal_connect (G_OBJECT(dev_combo), "changed", G_CALLBACK(v4l2_combo_change_device_cb),NULL);

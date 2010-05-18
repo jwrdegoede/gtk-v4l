@@ -22,11 +22,11 @@
 #include <gudev/gudev.h>
 
 struct v4l2_device {
-        const char *device_file;
-        const char *product_name;
-        const char *vendor;
-        const char *product;
-        const char *dev_path;
+        char *device_file;
+        char *product_name;
+        char *vendor;
+        char *product;
+        char *dev_path;
         int vendor_id;
         int product_id;
 };
@@ -61,6 +61,7 @@ v4l_device_uevent_cb (GUdevClient               *client,
 void
 v4l2_device_removed (const char *devpath)
 {
+	g_warning("removed: %s",devpath);
 	v4l2_combo_remove_device(devpath);
 }
 
