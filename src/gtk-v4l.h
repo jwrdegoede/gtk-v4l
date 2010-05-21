@@ -42,25 +42,6 @@
 #define MIN_CONTROLS_ON_MAIN_PAGE 6
 #define ICON_LOC "/usr/share/icons/gnome/24x24/devices/camera-web.png"
 
-GtkWidget *window,*advanced_window,*dev_combo;
-GtkTable *main_table,*table,*table2=NULL;
-GtkWidget *content_area,*content_area2;
-
-GtkWidget  *label_driver, *label_card, *label_bus;
-
-gchar *device = NULL,*devpath = NULL;
-
-gboolean expanded=FALSE;
-
-GOptionEntry entries[] =
-  {
-    { "device", 'd',0,G_OPTION_ARG_STRING, &device,"V4L2 device", NULL},
-    {NULL}
-  };
-
-
-GList *list=NULL;
-
 struct v4l2_property {
 	__u32 id;
 	__s32 value;
@@ -69,14 +50,6 @@ struct v4l2_property {
 	int ctrl_type;
 };
 
-
-GUdevClient *cam;
-
-struct v4l2_capability cap;
-
-int rownum,rownum_advanced,fd,controls=0;
-int curr_controls=0;
-gboolean started_cb=FALSE;
 
 /* Functions to manage lists */
 void v4l2_list_add (__u32 id, __s32 value,__s32 def,GtkWidget *w, int ctrl_type);

@@ -22,6 +22,34 @@
 
 #include "gtk-v4l.h"
 
+GtkWidget *window,*advanced_window,*dev_combo;
+GtkTable *main_table,*table,*table2=NULL;
+GtkWidget *content_area,*content_area2;
+
+GtkWidget  *label_driver, *label_card, *label_bus;
+
+gchar *device = NULL,*devpath = NULL;
+
+gboolean expanded=FALSE;
+
+GOptionEntry entries[] =
+  {
+    { "device", 'd',0,G_OPTION_ARG_STRING, &device,"V4L2 device", NULL},
+    {NULL}
+  };
+
+
+GList *list=NULL;
+
+GUdevClient *cam;
+
+struct v4l2_capability cap;
+
+int rownum,rownum_advanced,fd,controls=0;
+int curr_controls=0;
+gboolean started_cb=FALSE;
+
+
 struct v4l2_device {
         char *device_file;
         char *product_name;
