@@ -99,6 +99,14 @@ void v4l2_add_dialog_buttons(void);
 
 void v4l2_add_footer (gboolean advanced);
 
+/* gtk-v4l-device functions */
+GUdevClient *v4l2_device_init(void);
+void v4l2_device_destroy (GUdevClient *camera);
+GList *v4l2_device_coldplug(GUdevClient *camera);
+char *v4l2_device_default(void);
+char *v4l2_device_get_dev_path(char *device);
+
+
 
 
 #endif /* _GTK_V4L2_ */
