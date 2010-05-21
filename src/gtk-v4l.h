@@ -50,6 +50,15 @@ struct v4l2_property {
 	int ctrl_type;
 };
 
+struct v4l2_device {
+        char *device_file;
+        char *product_name;
+        char *vendor;
+        char *product;
+        char *dev_path;
+        int vendor_id;
+        int product_id;
+};
 
 /* Functions to manage lists */
 void v4l2_list_add (__u32 id, __s32 value,__s32 def,GtkWidget *w, int ctrl_type);

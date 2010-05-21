@@ -20,16 +20,7 @@
  */
 
 #include <gudev/gudev.h>
-
-struct v4l2_device {
-        char *device_file;
-        char *product_name;
-        char *vendor;
-        char *product;
-        char *dev_path;
-        int vendor_id;
-        int product_id;
-};
+#include "gtk-v4l.h"
 
 GList *dev_list=NULL;
 

@@ -49,18 +49,6 @@ int rownum,rownum_advanced,fd,controls=0;
 int curr_controls=0;
 gboolean started_cb=FALSE;
 
-
-struct v4l2_device {
-        char *device_file;
-        char *product_name;
-        char *vendor;
-        char *product;
-        char *dev_path;
-        int vendor_id;
-        int product_id;
-	int current_device;
-};
-
 GList *devs;
 
 void close_cb(GtkWidget *widget, gpointer user_data)
