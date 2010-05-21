@@ -145,9 +145,9 @@ v4l2_device_added (GUdevDevice *udevice,gboolean iscoldplug)
                 g_error ("Error getting V4L device");
                 return;
         }
-        if (g_strstr_len (device_file,3, "vbi"))
+        if (!strncmp (device_file, "/dev/vbi", 8))
         {
-                g_error ("Skipping vbi device: %s", device_file);
+                g_warning ("Skipping vbi device: %s", device_file);
                 return;
         }
         product_name  = g_udev_device_get_property (udevice, "ID_V4L_PRODUCT");
