@@ -2,7 +2,8 @@ bin_PROGRAMS = gtk-v4l
 gtk_v4l_SOURCES = gtk-v4l.c \
 		  gtk-v4l.h \
 		  error_dialog.c \
-		  gtk-v4l-device.c
+		  gtk-v4l-device-list.c \
+		  gtk-v4l-device-list.h
 gtk_v4l_CFLAGS = \
         $(GTK_CFLAGS)        \
         $(V4L_CFLAGS)     \

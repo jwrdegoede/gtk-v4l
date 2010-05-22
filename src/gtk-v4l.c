@@ -21,7 +21,9 @@
 
 
 #include "gtk-v4l.h"
+#include "gtk-v4l-device-list.h"
 
+Gtkv4lDeviceList *devlist;
 GtkWidget *window,*advanced_window,*dev_combo;
 GtkTable *main_table,*table,*table2=NULL;
 GtkWidget *content_area,*content_area2;
@@ -41,21 +43,15 @@ GOptionEntry entries[] =
 
 GList *list=NULL;
 
-GUdevClient *cam;
-
 struct v4l2_capability cap;
 
 int rownum,rownum_advanced,fd,controls=0;
 int curr_controls=0;
 gboolean started_cb=FALSE;
 
-GList *devs;
-
 void close_cb(GtkWidget *widget, gpointer user_data)
 {
 	v4l2_close(fd);
-	v4l2_device_free_all();
-	v4l2_device_destroy(cam);
 	gtk_main_quit();
 }
 void destroy(GtkWidget *widget, gpointer user_data)
@@ -712,153 +708,18 @@ void v4l2_add_dialog_buttons(void)
 }
 
 void
-v4l2_combo_init(void)
+v4l2_combo_add_device(struct v4l2_device *device, int idx)
 {
-	struct v4l2_device *temp;
-	GList *l;
-	int count=0,current=0;
-
-	dev_combo = gtk_combo_box_new_text();
-
-	for (l=devs;l;l=l->next)
-	{
-		temp = l->data;
-		gtk_combo_box_append_text(GTK_COMBO_BOX(dev_combo),temp->product_name);
-		count++;
-		if (!g_strcmp0(devpath, temp->dev_path))
-			current = count;
-	}
-	gtk_combo_box_set_active(GTK_COMBO_BOX(dev_combo),current);
-		
+  gtk_combo_box_insert_text (GTK_COMBO_BOX(dev_combo), idx, device->product_name);
 }
 
-void v4l2_combo_add_device(struct v4l2_device *temp)
+void
+v4l2_combo_remove_device(struct v4l2_device *device, int idx)
 {
-	struct v4l2_device *new_dev;
-	new_dev = g_malloc (sizeof (struct v4l2_device));
-
-        new_dev->device_file = g_strdup(temp->device_file);
-        new_dev->product_name = g_strdup(temp->product_name);
-        new_dev->vendor = g_strdup(temp->vendor);
-        new_dev->product = g_strdup (temp->product);
-        new_dev->vendor_id = temp->vendor_id;
-        new_dev->product_id = temp->product_id;
-        new_dev->dev_path = g_strdup(temp->dev_path);
-
-	g_warning("Add new name: %s", temp->product_name);
-	devs = g_list_append (devs, (gpointer) new_dev);
-	gtk_combo_box_append_text(GTK_COMBO_BOX(dev_combo),new_dev->product_name);
-}
-
-void v4l2_combo_remove_device(char *d)
-{
-	GList *l;
-        struct v4l2_device *temp;
-	int count=0,active;
-	gchar *error_string;
-
-
-        for (l=devs;l;l=l->next) {
-                temp = l->data;
-                if (!g_strcmp0(d,temp->dev_path)) 
-                {
-                        g_warning("We can remove : %s now and count=%d", temp->device_file,count);
-			
-			/* If the device being removed is the current device ?*/
-			if (!g_strcmp0(d,devpath))
-			{
-				/* And if this is the last device in the list?*/
-				if (v4l2_combo_count_items() == 1)
-				{
-				/*Oops last device gone, we are in trouble :)*/
-				/* For now quit */
-				// TODO: implement wait for new devices here
-					      error_string = g_strdup_printf ("No V4L devices" );
-					      show_error_dialog (error_string);
-					      g_free (error_string);
-					      v4l2_device_free_all();
-					      v4l2_device_destroy(cam);
-					      gtk_main_quit();
-				} else
-				{
-				// TODO: jump to the next device
-					g_warning("current device removed: jumping to next device");
-					// Close current device
-					// For the combo show next/previous option
-					// Open new device show its properties	
-					if (l->next == NULL) 	
-					{
-                                                active = gtk_combo_box_get_active(GTK_COMBO_BOX(dev_combo));
-                                                active--;
-                                                gtk_combo_box_set_active (GTK_COMBO_BOX(dev_combo),active);
-                                                l = l->prev;
-                                                temp = l->data;
-                                                devs = g_list_remove(devs, temp);
-                                                gtk_combo_box_remove_text(GTK_COMBO_BOX(dev_combo),count);
-
-                                                device=(gchar *)temp->device_file;
-                                                devpath=(gchar *)temp->dev_path;
-                                                g_message("chosen new device:%s",temp->product_name);
-
-                                                v4l2_switch_to_new_device(device);
-                                                return;
-
-					} else
-					{
-						active = gtk_combo_box_get_active(GTK_COMBO_BOX(dev_combo));
-						active++;
-						gtk_combo_box_set_active (GTK_COMBO_BOX(dev_combo),active);
-						l = l->next;
-						temp = l->data;
-			                        devs = g_list_remove(devs, temp);
-			                        gtk_combo_box_remove_text(GTK_COMBO_BOX(dev_combo),count);
-
-			                        device=(gchar *)temp->device_file;
-			                        devpath=(gchar *)temp->dev_path;
-			                        g_message("chosen new device:%s",temp->product_name);
-
-			                        v4l2_switch_to_new_device(device);
-						return;
-				
-					}			
-				}
-		
-			}
-			devs = g_list_remove(devs, temp);
-			gtk_combo_box_remove_text(GTK_COMBO_BOX(dev_combo),count);
-			return;
-                }
-		count++;
-        }
-	v4l2_combo_list_print();
-}
-
-int v4l2_combo_count_items(void)
-{
-	GList *l;
-	int count=0;
-	for (l=devs; l;l=l->next)
-		count++;
-
-	return(count);
-}
-
-/* Use this function for debugging */
-void v4l2_combo_list_print(void)
-{
-	GList *l;
-	struct v4l2_device *temp;
-
-	g_message("printing devs now");
-	
-	if (v4l2_combo_count_items() == 0)
-		return;
-
-	for (l=devs; l;l=l->next) 
-	{
-		temp = l->data;
-		g_message("device_path=%s, product_name=%s",temp->dev_path, temp->product_name);
-	}
+  /* If this removes the current device
+     v4l2_combo_change_device_cb() will get called and that will
+     handle selecting a new device. */
+  gtk_combo_box_remove_text (GTK_COMBO_BOX(dev_combo), idx);
 }
 
 void v4l2_switch_to_new_device(const char *device)
@@ -901,29 +762,24 @@ void v4l2_switch_to_new_device(const char *device)
 
 void v4l2_combo_change_device_cb (GtkWidget *wid, gpointer user_data)
 {
-	int active=0,count=0;
-	GList *l;
-	struct v4l2_device *temp;
+  gint active;
+  struct v4l2_device *temp;
 
-	//TODO: implement
-	g_message("device changed: do stuff");
-	active = gtk_combo_box_get_active(GTK_COMBO_BOX(dev_combo));
-	v4l2_close(fd);
-	for (l=devs; l; l=l->next)	
-	{
-		if (count==active)
-		{	
-			temp = l->data;
+  active = gtk_combo_box_get_active (GTK_COMBO_BOX(dev_combo));
+  /* This happens when our current device gets unplugged, just select the
+     first one in the list instead. */
+  if (active == -1) {
+    gtk_combo_box_set_active (GTK_COMBO_BOX(dev_combo), 0);
+    return;
+  }
 
-			device=(gchar *) temp->device_file;
-			devpath=(gchar *) temp->dev_path;
-			g_message("chosen new device:%s",temp->product_name);
+  v4l2_close(fd);
+  temp = g_list_nth_data (devlist->list, active);
 
-			v4l2_switch_to_new_device(device);
-		}
-		count++;
-	}	
-	
+  device=(gchar *) temp->device_file;
+  devpath=(gchar *) temp->devpath;
+
+  v4l2_switch_to_new_device(device);
 }
 
 
@@ -932,35 +788,40 @@ int main(int argc, char *argv[])
   GError *error = NULL;
   GdkPixbuf *icon_pixbuf = NULL;
   gchar *error_string;
-	
+  struct v4l2_device *dev;
+
   GOptionContext* context = g_option_context_new("- Gtk V4l app");
   g_option_context_add_main_entries (context,entries, NULL);
   g_option_context_add_group (context, gtk_get_option_group (TRUE));
   g_option_context_parse (context, &argc, &argv, &error);
 
-  cam = (GUdevClient *)  v4l2_device_init();
-  devs = (GList * ) v4l2_device_coldplug(cam);
-  
-  v4l2_combo_init();
+  devlist = g_object_new (GTK_V4L_TYPE_DEVICE_LIST, NULL);
+  devlist->device_added = v4l2_combo_add_device;
+  devlist->device_removed = v4l2_combo_remove_device;
+
+  dev_combo = gtk_combo_box_new_text();
   g_signal_connect (G_OBJECT(dev_combo), "changed", G_CALLBACK(v4l2_combo_change_device_cb),NULL);
 
-  g_warning("initial list");
-  v4l2_combo_list_print();
+  gtk_v4l_device_list_coldplug (devlist);
+
 
   gtk_init (&argc, &argv);
 
 
   if (device == NULL) // Assume default device
   {
-	if((device=(gchar *)v4l2_device_default()) == NULL) {
-		g_warning("device=%s",device);
-		error_string = g_strdup_printf ("No V4L2 device found");
-		show_error_dialog (error_string);
-		g_free (error_string);
-		return EXIT_FAILURE;
-	}
+	dev = g_list_nth_data(devlist->list, 0);
   }
-  devpath = (gchar *)v4l2_device_get_dev_path(device); 
+  else
+        dev = gtk_v4l_device_list_get_dev_by_device_file(devlist, device);
+
+  if (!dev) {
+          show_error_dialog ("No V4L2 devices found");
+          return EXIT_FAILURE;
+  }
+
+  devpath = dev->devpath;
+  device  = dev->device_file;
 
   g_warning("devpath=%s",devpath); 
   fd = v4l2_open(device, O_RDWR, 0);

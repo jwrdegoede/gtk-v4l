@@ -36,7 +36,6 @@
 #include <linux/videodev.h>
 #include <gtk/gtk.h>
 #include <libv4l2.h>
-#include <gudev/gudev.h>
 
 #define MAX_CONTROLS_ON_MAIN_PAGE 8
 #define MIN_CONTROLS_ON_MAIN_PAGE 6
@@ -48,16 +47,6 @@ struct v4l2_property {
 	__s32 def;
 	GtkWidget *w;
 	int ctrl_type;
-};
-
-struct v4l2_device {
-        char *device_file;
-        char *product_name;
-        char *vendor;
-        char *product;
-        char *dev_path;
-        int vendor_id;
-        int product_id;
 };
 
 /* Functions to manage lists */
@@ -84,6 +73,7 @@ void destroy(GtkWidget *widget, gpointer user_data);
 void bool_control_changed_cb (GtkButton *button, gpointer user_data);
 void advanced_cb (GtkWidget *widget, gpointer user_data);
 void int_control_changed_cb (GtkRange *range, gpointer user_data);
+void v4l2_combo_change_device_cb (GtkWidget *wid, gpointer user_data);
 
 
 /* Functions used to display the window */
@@ -98,15 +88,5 @@ void v4l2_add_dialog_buttons(void);
 
 
 void v4l2_add_footer (gboolean advanced);
-
-/* gtk-v4l-device functions */
-GUdevClient *v4l2_device_init(void);
-void v4l2_device_destroy (GUdevClient *camera);
-GList *v4l2_device_coldplug(GUdevClient *camera);
-char *v4l2_device_default(void);
-char *v4l2_device_get_dev_path(char *device);
-
-
-
 
 #endif /* _GTK_V4L2_ */
