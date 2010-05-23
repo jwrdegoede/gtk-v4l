@@ -24,19 +24,20 @@
 #include "gtk-v4l-device-list.h"
 
 Gtkv4lDeviceList *devlist;
+Gtkv4lDevice *curr_dev;
 GtkWidget *window,*advanced_window,*dev_combo;
 GtkTable *main_table,*table,*table2=NULL;
 GtkWidget *content_area,*content_area2;
 
 GtkWidget  *label_driver, *label_card, *label_bus;
 
-gchar *device = NULL,*devpath = NULL;
+gchar *device = NULL;
 
 gboolean expanded=FALSE;
 
 GOptionEntry entries[] =
   {
-    { "device", 'd',0,G_OPTION_ARG_STRING, &device,"V4L2 device", NULL},
+    { "device", 'd',0,G_OPTION_ARG_STRING, &device, "V4L2 device", NULL},
     {NULL}
   };
 
@@ -45,18 +46,16 @@ GList *list=NULL;
 
 struct v4l2_capability cap;
 
-int rownum,rownum_advanced,fd,controls=0;
+int rownum,rownum_advanced,controls=0;
 int curr_controls=0;
 gboolean started_cb=FALSE;
 
 void close_cb(GtkWidget *widget, gpointer user_data)
 {
-	v4l2_close(fd);
 	gtk_main_quit();
 }
 void destroy(GtkWidget *widget, gpointer user_data)
 {
-	v4l2_close(fd);
 	gtk_main_quit();
 }
 
@@ -207,7 +206,7 @@ void v4l2_add_menu_control (struct v4l2_queryctrl ctrl, struct v4l2_control c, g
 		struct v4l2_querymenu qm;
 	        qm.id = ctrl.id;
 	        qm.index = k;
-		if(ioctl(fd, VIDIOC_QUERYMENU, &qm) == 0) 
+		if(ioctl(curr_dev->fd, VIDIOC_QUERYMENU, &qm) == 0) 
 			gtk_combo_box_append_text (GTK_COMBO_BOX(combo), (const gchar *) qm.name);
 		else
 			g_warning ("Unable to use menu item for :%d", qm.index);
@@ -418,16 +417,11 @@ void v4l2_add_header_init ()
 }
 
 void
-v4l2_add_header_populate()
+v4l2_add_header_populate(Gtkv4lDevice *device)
 {
-	gchar *driver, *card, *bus_info;
-	driver = (gchar *)cap.driver;
-	card = (gchar *)cap.card;
-	bus_info = (gchar *)cap.bus_info;
-	
-	gtk_label_set_text(GTK_LABEL(label_driver), driver);
-	gtk_label_set_text(GTK_LABEL(label_card), card);
-	gtk_label_set_text(GTK_LABEL(label_bus),bus_info);	
+	gtk_label_set_text(GTK_LABEL(label_driver), device->driver);
+	gtk_label_set_text(GTK_LABEL(label_card), device->card);
+	gtk_label_set_text(GTK_LABEL(label_bus), device->bus_info);
 }
 
 int v4l2_count_controls(void)
@@ -437,30 +431,30 @@ int v4l2_count_controls(void)
 	struct v4l2_control c;
 
 	ctrl.id = V4L2_CTRL_FLAG_NEXT_CTRL;
-	if(0 == ioctl (fd, VIDIOC_QUERYCTRL, &ctrl)) {
+	if(0 == ioctl (curr_dev->fd, VIDIOC_QUERYCTRL, &ctrl)) {
 		do {
 			c.id = ctrl.id;
 			ctrl.id |= V4L2_CTRL_FLAG_NEXT_CTRL;
 			if(ctrl.flags & V4L2_CTRL_FLAG_DISABLED) 
 		                continue;
 
-			if(v4l2_ioctl(fd, VIDIOC_G_CTRL, &c)==0) {
+			if(v4l2_ioctl(curr_dev->fd, VIDIOC_G_CTRL, &c)==0) {
 				if ((ctrl.type == V4L2_CTRL_TYPE_INTEGER) || 
 				     (ctrl.type == V4L2_CTRL_TYPE_BOOLEAN) ||
 				     (ctrl.type == V4L2_CTRL_TYPE_MENU))
 					j++;
 				}
      		
-		} while(0 == v4l2_ioctl (fd, VIDIOC_QUERYCTRL, &ctrl));
+		} while(0 == v4l2_ioctl (curr_dev->fd, VIDIOC_QUERYCTRL, &ctrl));
 	} else {
 		for(k=V4L2_CID_BASE; k<V4L2_CID_LASTP1; k++) {
 			ctrl.id = k;
-			if(v4l2_ioctl(fd, VIDIOC_QUERYCTRL, &ctrl) == 0) 
+			if(v4l2_ioctl(curr_dev->fd, VIDIOC_QUERYCTRL, &ctrl) == 0) 
 				if(ctrl.flags & V4L2_CTRL_FLAG_DISABLED)
 					continue;
 
 			c.id = k;
-			if(v4l2_ioctl(fd, VIDIOC_G_CTRL, &c)==0) {
+			if(v4l2_ioctl(curr_dev->fd, VIDIOC_G_CTRL, &c)==0) {
 				if ((ctrl.type == V4L2_CTRL_TYPE_INTEGER) || 
 				     (ctrl.type == V4L2_CTRL_TYPE_BOOLEAN))
 					j++;
@@ -471,12 +465,12 @@ int v4l2_count_controls(void)
         /* Check any custom controls */
 	for(m=V4L2_CID_PRIVATE_BASE; ; m++) {
 		ctrl.id = m;
-		if(v4l2_ioctl(fd, VIDIOC_QUERYCTRL, &ctrl) == 0) {
+		if(v4l2_ioctl(curr_dev->fd, VIDIOC_QUERYCTRL, &ctrl) == 0) {
 			if(ctrl.flags & V4L2_CTRL_FLAG_DISABLED) 
 				continue;
 
 		c.id = m;
-		if(v4l2_ioctl(fd, VIDIOC_G_CTRL, &c)==0) {
+		if(v4l2_ioctl(curr_dev->fd, VIDIOC_G_CTRL, &c)==0) {
 			if ((ctrl.type == V4L2_CTRL_TYPE_INTEGER) || 
 			     (ctrl.type == V4L2_CTRL_TYPE_BOOLEAN))
 				j++;
@@ -513,7 +507,7 @@ int v4l2_write_to_driver_one(__u32 id,__u32 value, gboolean toggle)
 
 //	v4l2_list_print();
 	ctrl.id=id;
-	if(v4l2_ioctl(fd, VIDIOC_QUERYCTRL, &ctrl) == 0) {
+	if(v4l2_ioctl(curr_dev->fd, VIDIOC_QUERYCTRL, &ctrl) == 0) {
 		if(ctrl.flags & (V4L2_CTRL_FLAG_READ_ONLY |
 			         V4L2_CTRL_FLAG_DISABLED |
 	                         V4L2_CTRL_FLAG_GRABBED)) {
@@ -526,7 +520,7 @@ int v4l2_write_to_driver_one(__u32 id,__u32 value, gboolean toggle)
 		else
 			c.value = value;
 
-		if(v4l2_ioctl(fd, VIDIOC_S_CTRL, &c) != 0) {
+		if(v4l2_ioctl(curr_dev->fd, VIDIOC_S_CTRL, &c) != 0) {
 			fprintf(stderr, "\nFailed to set control \"%s\": %s\n Setting id=%d and value=%d",
                         ctrl.name, strerror(errno),c.id, c.value);
 		return EXIT_FAILURE;
@@ -552,7 +546,7 @@ int v4l2_write_to_driver(void)
 	for (l=list; l; l=l->next) {
 		s=l->data;
 		ctrl.id=s->id;
-		if(v4l2_ioctl(fd, VIDIOC_QUERYCTRL, &ctrl) == 0) {
+		if(v4l2_ioctl(curr_dev->fd, VIDIOC_QUERYCTRL, &ctrl) == 0) {
 		        if(ctrl.flags & (V4L2_CTRL_FLAG_READ_ONLY |
                         V4L2_CTRL_FLAG_DISABLED |
                         V4L2_CTRL_FLAG_GRABBED)) {
@@ -565,7 +559,7 @@ int v4l2_write_to_driver(void)
 			}
 			c.id = s->id;
 			c.value = s->value;
-			if(v4l2_ioctl(fd, VIDIOC_S_CTRL, &c) != 0) {
+			if(v4l2_ioctl(curr_dev->fd, VIDIOC_S_CTRL, &c) != 0) {
 				fprintf(stderr, "\nFailed to set control \"%s\": %s\n Setting id=%d and value=%d",
 				ctrl.name, strerror(errno),c.id, c.value);
 				continue;
@@ -654,11 +648,11 @@ void v4l2_control_panel_create_properties(void)
 		table2 = GTK_TABLE(gtk_table_new(rownum_advanced, 3, FALSE));
 		gtk_container_add (GTK_CONTAINER(advanced_window), GTK_WIDGET(table2));
 
-		v4l2_load_from_driver (fd,TRUE);
+		v4l2_load_from_driver (curr_dev->fd,TRUE);
 		v4l2_add_footer (TRUE);
 
 	} else {
-		v4l2_load_from_driver (fd, FALSE);
+		v4l2_load_from_driver (curr_dev->fd, FALSE);
 		v4l2_add_footer (FALSE);			
 		}
 
@@ -668,12 +662,12 @@ void v4l2_control_panel_create_properties(void)
 	
 }
 
-void v4l2_control_panel_create (void)
+void v4l2_control_panel_create (Gtkv4lDevice *device)
 {
 	rownum=5;
 	main_table = GTK_TABLE(gtk_table_new (rownum,3,FALSE));
 	v4l2_add_header_init();
-	v4l2_add_header_populate();
+	v4l2_add_header_populate(device);
 
 	v4l2_control_panel_create_properties();
 	
@@ -708,13 +702,13 @@ void v4l2_add_dialog_buttons(void)
 }
 
 void
-v4l2_combo_add_device(struct v4l2_device *device, int idx)
+v4l2_combo_add_device(Gtkv4lDevice *device, int idx)
 {
-  gtk_combo_box_insert_text (GTK_COMBO_BOX(dev_combo), idx, device->product_name);
+  gtk_combo_box_insert_text (GTK_COMBO_BOX(dev_combo), idx, device->card);
 }
 
 void
-v4l2_combo_remove_device(struct v4l2_device *device, int idx)
+v4l2_combo_remove_device(Gtkv4lDevice *device, int idx)
 {
   /* If this removes the current device
      v4l2_combo_change_device_cb() will get called and that will
@@ -722,36 +716,13 @@ v4l2_combo_remove_device(struct v4l2_device *device, int idx)
   gtk_combo_box_remove_text (GTK_COMBO_BOX(dev_combo), idx);
 }
 
-void v4l2_switch_to_new_device(const char *device)
+void v4l2_switch_to_new_device(Gtkv4lDevice *device)
 {
-	gchar *error_string;
-	/* Close existing descriptor */
-	v4l2_close(fd);
 	v4l2_list_reset();
 	started_cb = FALSE;
-	/* Now open new device and show its properties */
-	fd = v4l2_open(device, O_RDWR, 0);
-	if(fd < 0) 
-	{
-		error_string = g_strdup_printf ("Could not open device : %s", device );
-		show_error_dialog (error_string);
-		g_free (error_string);
-		// TODO: handle this more gracefully
-		exit(1);
-	}
 
-
-	if(v4l2_ioctl(fd, VIDIOC_QUERYCAP, &cap) == -1) 
-	{
-		error_string = g_strdup_printf ("Could not access : %s", device );
-        	show_error_dialog (error_string);
-	        g_free (error_string);
-       		// TODO: handle this more gracefully
-       		exit(1);
-	}
-
-	v4l2_ioctl(fd, VIDIOC_QUERYCAP, &cap);
-	v4l2_add_header_populate();
+	curr_dev = device;
+	v4l2_add_header_populate(device);
 	gtk_widget_destroy(GTK_WIDGET(table));
 	curr_controls=0;
 	v4l2_control_panel_create_properties();
@@ -763,7 +734,6 @@ void v4l2_switch_to_new_device(const char *device)
 void v4l2_combo_change_device_cb (GtkWidget *wid, gpointer user_data)
 {
   gint active;
-  struct v4l2_device *temp;
 
   active = gtk_combo_box_get_active (GTK_COMBO_BOX(dev_combo));
   /* This happens when our current device gets unplugged, just select the
@@ -773,13 +743,8 @@ void v4l2_combo_change_device_cb (GtkWidget *wid, gpointer user_data)
     return;
   }
 
-  v4l2_close(fd);
-  temp = g_list_nth_data (devlist->list, active);
-
-  device=(gchar *) temp->device_file;
-  devpath=(gchar *) temp->devpath;
-
-  v4l2_switch_to_new_device(device);
+  curr_dev = g_list_nth_data (devlist->list, active);
+  v4l2_switch_to_new_device (g_list_nth_data (devlist->list, active));
 }
 
 
@@ -788,7 +753,6 @@ int main(int argc, char *argv[])
   GError *error = NULL;
   GdkPixbuf *icon_pixbuf = NULL;
   gchar *error_string;
-  struct v4l2_device *dev;
 
   GOptionContext* context = g_option_context_new("- Gtk V4l app");
   g_option_context_add_main_entries (context,entries, NULL);
@@ -810,36 +774,17 @@ int main(int argc, char *argv[])
 
   if (device == NULL) // Assume default device
   {
-	dev = g_list_nth_data(devlist->list, 0);
+	curr_dev = g_list_nth_data(devlist->list, 0);
   }
   else
-        dev = gtk_v4l_device_list_get_dev_by_device_file(devlist, device);
+        curr_dev = gtk_v4l_device_list_get_dev_by_device_file(devlist, device);
 
-  if (!dev) {
+  if (!curr_dev) {
           show_error_dialog ("No V4L2 devices found");
           return EXIT_FAILURE;
   }
 
-  devpath = dev->devpath;
-  device  = dev->device_file;
-
-  g_warning("devpath=%s",devpath); 
-  fd = v4l2_open(device, O_RDWR, 0);
-
-  if(fd < 0) {
-      error_string = g_strdup_printf ("Could not open device : %s", device );
-      show_error_dialog (error_string);
-      g_free (error_string);
-      return EXIT_FAILURE;
-  }
-
-  if(v4l2_ioctl(fd, VIDIOC_QUERYCAP, &cap) == -1) {
-	error_string = g_strdup_printf ("Could not access : %s", device );
-	show_error_dialog (error_string);
-	g_free (error_string);
-	return EXIT_FAILURE;
-  }
-
+  printf("curr_dev: %s\n", curr_dev->card);
 
   window = gtk_dialog_new();
   gtk_window_set_title(GTK_WINDOW(window), "GTK V4L Device properties");
@@ -857,7 +802,7 @@ int main(int argc, char *argv[])
   gtk_container_set_border_width (GTK_CONTAINER(window),7);
 
 
-  v4l2_control_panel_create();
+  v4l2_control_panel_create(curr_dev);
 
   v4l2_add_dialog_buttons();
   g_signal_connect(G_OBJECT(window),"destroy", G_CALLBACK(destroy), NULL);

@@ -22,7 +22,6 @@
 
 #include <gudev/gudev.h>
 #include "gtk-v4l-device-list.h"
-#include "gtk-v4l.h"
 
 #define GTK_V4L_DEVICE_LIST_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GTK_V4L_TYPE_DEVICE_LIST, Gtkv4lDeviceListPrivate))
 
@@ -42,7 +41,7 @@ G_DEFINE_TYPE (Gtkv4lDeviceList, gtk_v4l_device_list, G_TYPE_OBJECT);
 static void
 gtk_v4l_device_free_device (gpointer data, gpointer user_data)
 {
-  g_free (data);
+  g_object_unref (data);
 }
 
 static void
@@ -83,29 +82,30 @@ static void
 gtk_v4l_device_list_add_dev (Gtkv4lDeviceList *self,
                              GUdevDevice      *udevice)
 {
-  struct v4l2_device *device;
+  Gtkv4lDevice       *device;
   const gchar        *device_file;
   const gchar        *devpath;
   const gchar        *product_name;
 
   device_file = g_udev_device_get_device_file (udevice);
-  devpath = g_udev_device_get_property (udevice, "DEVPATH");
-  product_name = g_udev_device_get_property (udevice, "ID_V4L_PRODUCT");
-  if (devpath == NULL || device_file == NULL)
+  if (device_file == NULL)
   {
-          g_warning ("Error getting V4L device");
-          return;
+    g_warning ("%s: Error getting V4L device", G_STRLOC);
+    return;
   }
 
   /* Skip vbi devices */
   if (!strncmp (device_file, "/dev/vbi", 8))
-          return;
+    return;
 
-  /* The probing went well, so go ahead and add the device */
-  device = g_malloc (sizeof (struct v4l2_device));
-  device->device_file = g_strdup(device_file);
-  device->devpath = g_strdup(devpath);
-  device->product_name = g_strdup(product_name);
+  device = g_object_new (GTK_V4L_TYPE_DEVICE, "device_file", device_file, NULL);
+  /* If fd == -1, then for some reason the device could not be opened, or it
+     is not a v4l2 device, skip it */
+  if (device->fd == -1) {
+    g_object_unref (device);
+    return;
+  }
+
   self->list = g_list_append (self->list, device);
 
   if (self->device_added)
@@ -117,18 +117,18 @@ gtk_v4l_device_list_remove_dev (Gtkv4lDeviceList *self,
                                 GUdevDevice      *udevice)
 {
   GList *elem;
-  struct v4l2_device *device = NULL;
-  const gchar *devpath = g_udev_device_get_property (udevice, "DEVPATH");
+  Gtkv4lDevice *device = NULL;
+  const gchar *device_file = g_udev_device_get_device_file (udevice);
   int idx = 0;
-  
+
   for (elem = g_list_first (self->list); elem; elem = g_list_next (elem)) {
     device = elem->data;
-    if (g_str_equal (device->devpath, devpath))
+    if (g_str_equal (device->device_file, device_file))
       break;
     idx++;
   }
   if (!elem) {
-    g_error ("Error devpath: %s not found in device list", devpath);
+    g_error ("Error device_file: %s not found in device list", device_file);
     return;
   }
 
@@ -137,7 +137,7 @@ gtk_v4l_device_list_remove_dev (Gtkv4lDeviceList *self,
   if (self->device_removed)
     self->device_removed (device, idx);
 
-  gtk_v4l_device_free_device (device, NULL);
+  g_object_unref (device);
 }
 
 static void
@@ -167,12 +167,12 @@ gtk_v4l_device_list_coldplug (Gtkv4lDeviceList *self)
   g_list_free (devices);
 }
 
-struct v4l2_device *
+Gtkv4lDevice *
 gtk_v4l_device_list_get_dev_by_device_file (Gtkv4lDeviceList *self,
                                             const gchar *device_file)
 {
   GList *elem;
-  struct v4l2_device *device = NULL;
+  Gtkv4lDevice *device = NULL;
 
   for (elem = g_list_first (self->list); elem; elem = g_list_next (elem)) {
     device = elem->data;

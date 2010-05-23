@@ -37,6 +37,8 @@
 #include <gtk/gtk.h>
 #include <libv4l2.h>
 
+#include "gtk-v4l-device.h"
+
 #define MAX_CONTROLS_ON_MAIN_PAGE 8
 #define MIN_CONTROLS_ON_MAIN_PAGE 6
 #define ICON_LOC "/usr/share/icons/gnome/24x24/devices/camera-web.png"
@@ -64,7 +66,7 @@ int v4l2_count_controls(void);
 int v4l2_write_to_driver(void);
 void v4l2_load_from_driver (int fd, gboolean advanced);
 int v4l2_write_to_driver_one(__u32 id,__u32 value, gboolean toggle);
-void v4l2_switch_to_new_device(const char *device);
+void v4l2_switch_to_new_device(Gtkv4lDevice *device);
 
 
 /* Callbacks */
@@ -80,8 +82,8 @@ void v4l2_combo_change_device_cb (GtkWidget *wid, gpointer user_data);
 void v4l2_add_int_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboolean advanced);
 void v4l2_add_bool_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboolean advanced);
 void v4l2_add_control (struct v4l2_queryctrl ctrl, struct v4l2_control c,gboolean advanced);
-void v4l2_add_header (void);
-void v4l2_control_panel_create (void);
+void v4l2_add_header (Gtkv4lDevice *device);
+void v4l2_control_panel_create (Gtkv4lDevice *device);
 void v4l2_add_footer (gboolean advanced);
 void v4l2_add_dialog_buttons(void);
 

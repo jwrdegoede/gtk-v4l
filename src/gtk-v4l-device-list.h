@@ -24,6 +24,7 @@
 #define __GTK_V4L_DEVICE_LIST_H__
 
 #include <glib-object.h>
+#include "gtk-v4l-device.h"
 
 #define GTK_V4L_TYPE_DEVICE_LIST            (gtk_v4l_device_list_get_type ())
 #define GTK_V4L_DEVICE_LIST(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), GTK_V4L_TYPE_DEVICE_LIST, Gtkv4lDeviceList))
@@ -36,21 +37,14 @@ typedef struct _Gtkv4lDeviceList Gtkv4lDeviceList;
 typedef struct _Gtkv4lDeviceListClass Gtkv4lDeviceListClass;
 typedef struct _Gtkv4lDeviceListPrivate Gtkv4lDeviceListPrivate;
 
-/* FIXME change into a gobject class, living in its own .h and .c */
-struct v4l2_device {
-        char *device_file;
-        char *devpath;
-        char *product_name;
-};
-
 struct _Gtkv4lDeviceList {
   GObject parent;
   /* FIXME convert these 2 into signals */
   /* Called after a device is added to the list */
-  void (*device_added)(struct v4l2_device *device, int idx);
+  void (*device_added)(Gtkv4lDevice *device, int idx);
   /* Called after a device is removed from the list, the idx argument
      is the idx in the list the device used to have. */
-  void (*device_removed)(struct v4l2_device *device, int idx);
+  void (*device_removed)(Gtkv4lDevice *device, int idx);
   /* instance members */
   GList *list;
   Gtkv4lDeviceListPrivate *priv;
@@ -62,7 +56,7 @@ struct _Gtkv4lDeviceListClass {
 };
 
 void gtk_v4l_device_list_coldplug (Gtkv4lDeviceList *self);
-struct v4l2_device *gtk_v4l_device_list_get_dev_by_device_file (
+Gtkv4lDevice *gtk_v4l_device_list_get_dev_by_device_file (
   Gtkv4lDeviceList *self, const gchar *device_file);
 
 #endif
