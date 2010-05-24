@@ -53,4 +53,6 @@ struct _Gtkv4lDeviceClass {
   /* class members */
 };
 
+GList *gtk_v4l_device_get_controls (Gtkv4lDevice *self);
+
 #endif

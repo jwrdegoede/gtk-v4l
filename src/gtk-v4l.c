@@ -1,6 +1,7 @@
 /* gtk-v4l - GTK tool for control v4l camera properties
  *
  * Copyright (C) 2010 - Huzaifa Sidhpurwala <huzaifas@redhat.com>
+ * Copyright (C) 2010 - Hans de Goede <hdegoede@redhat.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,7 @@
 
 
 #include "gtk-v4l.h"
+#include "gtk-v4l-control.h"
 #include "gtk-v4l-device-list.h"
 
 Gtkv4lDeviceList *devlist;
@@ -33,8 +35,6 @@ GtkWidget  *label_driver, *label_card, *label_bus;
 
 gchar *device = NULL;
 
-gboolean expanded=FALSE;
-
 GOptionEntry entries[] =
   {
     { "device", 'd',0,G_OPTION_ARG_STRING, &device, "V4L2 device", NULL},
@@ -42,18 +42,8 @@ GOptionEntry entries[] =
   };
 
 
-GList *list=NULL;
+int rownum,rownum_advanced;
 
-struct v4l2_capability cap;
-
-int rownum,rownum_advanced,controls=0;
-int curr_controls=0;
-gboolean started_cb=FALSE;
-
-void close_cb(GtkWidget *widget, gpointer user_data)
-{
-	gtk_main_quit();
-}
 void destroy(GtkWidget *widget, gpointer user_data)
 {
 	gtk_main_quit();
@@ -61,169 +51,148 @@ void destroy(GtkWidget *widget, gpointer user_data)
 
 void bool_control_changed_cb (GtkButton *button, gpointer user_data)
 {
-	int id;
+	Gtkv4lControl *ctrl = GTK_V4L_CONTROL (user_data);
 	gboolean state;
-	id = GPOINTER_TO_INT (user_data);
+
 	state = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON(button));
-	if (started_cb) {
-	        if (!v4l2_list_edit_element(id,state))
-			g_warning ("Error inserting value in the list: %d, %d", id, state);
-		
-	       if (v4l2_write_to_driver_one(id,state,FALSE) == EXIT_FAILURE) 
-			g_warning ("Error writing values to the driver");
-	}
+	gtk_v4l_control_set (ctrl, state);
+	/* FIXME read back actual resulting value and update widget */
 }
 
 void button_control_changed_cb (GtkButton *button, gpointer user_data)
 {
-	int id;
-	id = GPOINTER_TO_INT(user_data);
-	if (v4l2_write_to_driver_one(id,0,TRUE) == EXIT_FAILURE)
-		g_warning("Error writting button value to the driver");
-}
+	Gtkv4lControl *ctrl = GTK_V4L_CONTROL (user_data);
 
-void v4l2_list_add (__u32 id, __s32 value, __s32 def, GtkWidget *w, int ctrl_type)
-{
-	struct v4l2_property* temp;
-	temp = g_malloc (sizeof (struct v4l2_property));
-	temp->id = id; temp->value = value; temp->def = def;
-	temp->w = w;
-	temp->ctrl_type = ctrl_type;
-	list = g_list_append (list, (gpointer) temp);
-}
-
-gboolean v4l2_list_edit_element (__u32 id, __s32 value)
-{
-	gboolean output=FALSE;
-	GList *l;
-	struct v4l2_property *s;
-	for (l=list; l; l=l->next) {
-		s = l->data;
-		if (s->id == id) {
-			s->value = value;
-			output = TRUE;
-		}
-	}
-	return output;
-}
-void v4l2_list_print(void)
-{
-	GList *l;
-	struct v4l2_property *s;
-	for (l=list; l;l=l->next) {
-		s = l->data;
-		fprintf(stderr, "\nid=%d, value=%d, default=%d",s->id, s->value,s->def);
-	}
-	
-}
-
-void v4l2_list_reset(void)
-{
-	GList *l;
-	struct v4l2_property *s;
-	for (l=list; l; l=l->next) {
-		s=l->data;
-		g_free (s);
-		g_list_free(l);
-	}
-	list = NULL;
-}
-
-void v4l2_reset_list_to_default(void)
-{
-	GList *l;
-	struct v4l2_property *s;
-	for (l=list;l;l=l->next) {
-		s=l->data;
-		s->value = s->def;
-		if (v4l2_write_to_driver_one(s->id,s->value,FALSE) == EXIT_SUCCESS) {
-			switch(s->ctrl_type) {
-				case V4L2_CTRL_TYPE_INTEGER:
-					gtk_range_set_value(GTK_RANGE(s->w),s->value);
-					break;
-				case V4L2_CTRL_TYPE_BOOLEAN:
-					gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(s->w),s->value);
-					break;
-				case V4L2_CTRL_TYPE_MENU:
-					gtk_combo_box_set_active(GTK_COMBO_BOX(s->w),s->value);
-					break;
-				case V4L2_CTRL_TYPE_BUTTON:
-					// do nothing
-					break;
-			}
-		}
-			
-	}
+	gtk_v4l_control_set (ctrl, 0xffffffff);
 }
 
 void int_control_changed_cb (GtkRange *range, gpointer user_data)
 {
-	int id;
+	Gtkv4lControl *ctrl = GTK_V4L_CONTROL (user_data);
 	gdouble value;
 
-	id = GPOINTER_TO_INT (user_data);
 	value = gtk_range_get_value (GTK_RANGE (range));
-	if (started_cb) {
-		if (!v4l2_list_edit_element(id,value))
-			g_warning ("Error inserting value in the list: %d, %d", (int)id, (int)value);
-       		 if (v4l2_write_to_driver_one(id,value,FALSE) == EXIT_FAILURE) 
-			g_warning ("Error writing values to the driver");			
-	}
+	gtk_v4l_control_set (ctrl, value);
+	/* FIXME read back actual resulting value and update widget */
 }
 
-gchar * int_control_format_cb (GtkScale *scale, gdouble value, gpointer user_data)
+gchar *
+int_control_format_cb (GtkScale *scale, gdouble value, gpointer user_data)
 {
 	int max = GPOINTER_TO_INT(user_data);
-	return  g_strdup_printf("%5.2f %%",  ((value/max)*100) );
-	
-
+	return g_strdup_printf("%5.2f %%",  ((value/max)*100) );
 }
 
 void menu_control_changed_cb (GtkWidget *wid, gpointer user_data)
 {
-	int id;
-	gdouble value;
+	Gtkv4lControl *ctrl = GTK_V4L_CONTROL (user_data);
+	gint value;
 
-        id = GPOINTER_TO_INT (user_data);
 	value = gtk_combo_box_get_active(GTK_COMBO_BOX(wid));
-	
-        if (started_cb) {
-		if (!v4l2_list_edit_element(id,value))
-			g_warning ("Error inserting value in the list: %d, %d", (int)id, (int)value);
-		if (v4l2_write_to_driver_one(id,value,FALSE) == EXIT_FAILURE)
-			g_warning ("Error writing values to the driver");
-        }
-
+	gtk_v4l_control_set (ctrl, value);
+	/* FIXME read back actual resulting value and update widget */
 }
 
-void v4l2_add_menu_control (struct v4l2_queryctrl ctrl, struct v4l2_control c, gboolean advanced)
+GtkWidget *v4l2_create_menu_widget (Gtkv4lControl *control)
 {
-	GtkWidget *label,*combo,*align;
-	int k;	
-	curr_controls++;
+	GtkWidget *combo;
+	int k;
+
 	combo = gtk_combo_box_new_text();
-	for (k=ctrl.minimum; k<=ctrl.maximum; k++) {
+	for (k=control->minimum; k<=control->maximum; k++) {
 		struct v4l2_querymenu qm;
-	        qm.id = ctrl.id;
+	        qm.id = control->id;
 	        qm.index = k;
+	        /* FIXME */
 		if(ioctl(curr_dev->fd, VIDIOC_QUERYMENU, &qm) == 0) 
 			gtk_combo_box_append_text (GTK_COMBO_BOX(combo), (const gchar *) qm.name);
 		else
 			g_warning ("Unable to use menu item for :%d", qm.index);
 	}
 
-        gtk_widget_set_size_request (GTK_WIDGET(combo),250, -1);
-	
-	gtk_combo_box_set_active (GTK_COMBO_BOX(combo), c.value);
-	g_signal_connect (G_OBJECT(combo), "changed", G_CALLBACK(menu_control_changed_cb),GINT_TO_POINTER(ctrl.id));
+	gtk_combo_box_set_active (GTK_COMBO_BOX(combo),
+	                          gtk_v4l_control_get(control));
+	g_signal_connect (G_OBJECT(combo), "changed", G_CALLBACK(menu_control_changed_cb), control);
 
-	label = gtk_label_new ((gchar *)ctrl.name);
+	return combo;
+}
+
+GtkWidget *v4l2_create_int_widget (Gtkv4lControl *control)
+{	
+	GtkWidget *HScale;
+	gint min, max, step,def;
+	min = control->minimum; max = control->maximum; step = control->step;
+
+	HScale = gtk_hscale_new_with_range (min,max,step);
+	gtk_scale_set_value_pos (GTK_SCALE(HScale), GTK_POS_RIGHT);
+	gtk_scale_set_digits (GTK_SCALE(HScale), 0);
+	gtk_range_set_increments (GTK_RANGE(HScale), step, step);
+	gtk_range_set_value (GTK_RANGE(HScale),
+	                     (gdouble) gtk_v4l_control_get(control));
+	g_signal_connect (G_OBJECT (HScale), "value-changed", G_CALLBACK (int_control_changed_cb), control);
+	g_signal_connect (G_OBJECT (HScale), "format-value", G_CALLBACK (int_control_format_cb), GINT_TO_POINTER(max));
+
+	return HScale;
+}
+
+GtkWidget *v4l2_create_button_widget (Gtkv4lControl *control)
+{	
+	GtkWidget *button;
+	
+	button = gtk_button_new_with_label("Reset");
+	g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(button_control_changed_cb), control);
+
+	return button;
+}
+
+GtkWidget *v4l2_create_bool_widget (Gtkv4lControl *control)
+{
+	GtkWidget *check;
+	gboolean state;
+
+	state = (gboolean) gtk_v4l_control_get (control);
+	check = gtk_check_button_new();
+	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(check), state);
+	g_signal_connect ( G_OBJECT(check), "clicked", G_CALLBACK (bool_control_changed_cb), control);
+
+	return check;
+}
+
+void v4l2_add_control (Gtkv4lControl *control)
+{
+	GtkWidget *widget, *label, *align;
+
+	switch(control->type) {
+		case V4L2_CTRL_TYPE_INTEGER:
+			widget = v4l2_create_int_widget (control);
+			break;
+		case V4L2_CTRL_TYPE_BOOLEAN:
+			widget = v4l2_create_bool_widget (control);
+			break;
+		case V4L2_CTRL_TYPE_MENU:
+			widget = v4l2_create_menu_widget (control);
+			break;
+		case V4L2_CTRL_TYPE_BUTTON:
+			widget = v4l2_create_button_widget (control);
+			break;
+		default:
+			g_warning("Skipping control %s with unknown type %d",
+			          control->name, control->type);
+			return;
+	}
+
+	control->user_data = widget;
+
+        gtk_widget_set_size_request (widget, 250, -1);
+
+	label = gtk_label_new ((gchar *)control->name);
 	gtk_misc_set_alignment (GTK_MISC(label),0.0,0.5);
 
 	align = gtk_alignment_new (0.0,0.5,0.0,0.0);
-	gtk_container_add (GTK_CONTAINER(align), combo);
+	gtk_container_add (GTK_CONTAINER(align), widget);
 
-        if ((advanced == TRUE) && curr_controls > MIN_CONTROLS_ON_MAIN_PAGE) {
+        /* FIXME */
+        if (FALSE) {
                 rownum_advanced++;
                 gtk_table_resize (table2, rownum_advanced, 2);
                 gtk_table_attach (GTK_TABLE(table2), label, 0,1,rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5, 5);
@@ -234,130 +203,6 @@ void v4l2_add_menu_control (struct v4l2_queryctrl ctrl, struct v4l2_control c, g
                 gtk_table_attach (GTK_TABLE(table), label, 0,1,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
                 gtk_table_attach (GTK_TABLE(table), align, 1,2,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
         }
-
-        v4l2_list_add (ctrl.id, c.value,ctrl.default_value,GTK_WIDGET(combo),V4L2_CTRL_TYPE_MENU);
-
-}
-
-void v4l2_add_int_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboolean advanced)
-{	
-	GtkWidget *HScale,*label;
-	curr_controls++;
-	gint min, max, step,def;
-	min = ctrl.minimum; max = ctrl.maximum; step = ctrl.step; def = c.value;
-
-	HScale = gtk_hscale_new_with_range (min,max,step);
-	gtk_scale_set_value_pos (GTK_SCALE(HScale), GTK_POS_RIGHT);
-	gtk_scale_set_digits (GTK_SCALE(HScale), 0);
-	gtk_widget_set_size_request (GTK_WIDGET(HScale),250,-1);
-	g_signal_connect (G_OBJECT (HScale), "value-changed", G_CALLBACK (int_control_changed_cb), GINT_TO_POINTER(ctrl.id));
-	g_signal_connect (G_OBJECT (HScale), "format-value", G_CALLBACK (int_control_format_cb), GINT_TO_POINTER(max));
-	gtk_range_set_increments (GTK_RANGE(HScale), step, step);
-	gtk_range_set_value (GTK_RANGE(HScale), (gdouble) def);
-//	gtk_scale_set_draw_value(GTK_SCALE(HScale), FALSE);
-
-	label = gtk_label_new ((const gchar *)ctrl.name);
-	gtk_misc_set_alignment (GTK_MISC(label),0.0,0.5);	
-	gtk_widget_set_size_request (label, 250, -1);
-
-//	tag = gtk_label_new (g_strdup_printf("%d", def));
-//	gtk_misc_set_alignment (GTK_MISC(tag), 0.0,0.5);
-//	gtk_widget_set_size_request (label, 50,-1);
-
-	if ((advanced == TRUE) && curr_controls > MIN_CONTROLS_ON_MAIN_PAGE) {
-		rownum_advanced++;
-		gtk_table_resize (table2, rownum_advanced, 2);
-		gtk_table_attach (GTK_TABLE(table2), label, 0,1,rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5, 5);
-		gtk_table_attach (GTK_TABLE(table2), HScale, 1,2,rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5, 5);
-//		gtk_table_attach (GTK_TABLE(table2), tag, 1,2, rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5, 5);
-	} else {
-		rownum++;
-		gtk_table_resize (table, rownum, 2);
-		gtk_table_attach (GTK_TABLE(table), label, 0,1,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
-		gtk_table_attach (GTK_TABLE(table), HScale, 1,2,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
- //              gtk_table_attach (GTK_TABLE(table), tag, 1,2,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
-
-	}
-
-	v4l2_list_add (ctrl.id, def,ctrl.default_value,GTK_WIDGET(HScale),V4L2_CTRL_TYPE_INTEGER);
-}
-
-void v4l2_add_button_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboolean advanced)
-{	
-	GtkWidget *button,*label;
-	curr_controls++;
-	
-	button = gtk_button_new_with_label("Reset");
-
-	label = gtk_label_new ((const gchar *)ctrl.name);
-	gtk_misc_set_alignment (GTK_MISC(label),0.0,0.5);	
-	gtk_widget_set_size_request (label, 250, -1);
-
-	g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(button_control_changed_cb),GINT_TO_POINTER(ctrl.id));
-
-	if ((advanced == TRUE) && curr_controls > MIN_CONTROLS_ON_MAIN_PAGE) {
-		rownum_advanced++;
-		gtk_table_resize (table2, rownum_advanced, 2);
-		gtk_table_attach (GTK_TABLE(table2), label, 0,1,rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5, 5);
-		gtk_table_attach (GTK_TABLE(table2), button, 1,2,rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5, 5);
-	} else {
-		rownum++;
-		gtk_table_resize (table, rownum, 2);
-		gtk_table_attach (GTK_TABLE(table), label, 0,1,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
-		gtk_table_attach (GTK_TABLE(table), button, 1,2,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
-	}
-}
-
-void v4l2_add_bool_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboolean advanced)
-{
-	GtkWidget *check,*label,*align;
-	curr_controls++;
-	gboolean state;
-
-	state = (gboolean) c.value;
-	check = gtk_check_button_new();
-	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(check), state);
-	g_signal_connect ( G_OBJECT(check), "clicked", G_CALLBACK (bool_control_changed_cb), GINT_TO_POINTER(ctrl.id));	
-
-	label = gtk_label_new ((const gchar *)ctrl.name);
-	gtk_misc_set_alignment (GTK_MISC(label),0.0,0.5);
-
-        align = gtk_alignment_new (0.0,0.5,0.0,0.0);
-        gtk_container_add (GTK_CONTAINER(align), check);
-
-       if ((advanced == TRUE) && curr_controls > MIN_CONTROLS_ON_MAIN_PAGE) {
-                rownum_advanced++;
-		gtk_table_resize (table2, rownum_advanced, 2);
-		gtk_table_attach (GTK_TABLE(table2), label,0,1,rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5,5);
-		gtk_table_attach (GTK_TABLE(table2), align,1,2, rownum_advanced, rownum_advanced+1, GTK_FILL, GTK_FILL, 5,5);
-		} else {
-		rownum++;
-	        gtk_table_resize (table, rownum, 2);
-	        gtk_table_attach (GTK_TABLE(table), label, 0,1,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
-	        gtk_table_attach (GTK_TABLE(table), align, 1,2,rownum, rownum+1, GTK_FILL, GTK_FILL, 5, 5);
-	}
-	v4l2_list_add (ctrl.id, state,ctrl.default_value,GTK_WIDGET(check),V4L2_CTRL_TYPE_BOOLEAN);
-}
-
-void v4l2_add_control (struct v4l2_queryctrl ctrl, struct v4l2_control c,gboolean advanced)
-{
-	switch(ctrl.type) {
-		case V4L2_CTRL_TYPE_INTEGER:
-			v4l2_add_int_control (ctrl,c,advanced);
-			break;
-		case V4L2_CTRL_TYPE_BOOLEAN:
-			v4l2_add_bool_control (ctrl,c,advanced);
-			break;
-		case V4L2_CTRL_TYPE_MENU:
-			v4l2_add_menu_control (ctrl,c,advanced);
-			break;
-		case V4L2_CTRL_TYPE_BUTTON:
-			v4l2_add_button_control (ctrl,c,advanced);
-			break;
-		default:
-			g_message("something else");
-			break;
-	}
 }
 
 
@@ -424,242 +269,68 @@ v4l2_add_header_populate(Gtkv4lDevice *device)
 	gtk_label_set_text(GTK_LABEL(label_bus), device->bus_info);
 }
 
-int v4l2_count_controls(void)
-{
-	int j=0,k=0,m=0;
-	struct v4l2_queryctrl ctrl;
-	struct v4l2_control c;
-
-	ctrl.id = V4L2_CTRL_FLAG_NEXT_CTRL;
-	if(0 == ioctl (curr_dev->fd, VIDIOC_QUERYCTRL, &ctrl)) {
-		do {
-			c.id = ctrl.id;
-			ctrl.id |= V4L2_CTRL_FLAG_NEXT_CTRL;
-			if(ctrl.flags & V4L2_CTRL_FLAG_DISABLED) 
-		                continue;
-
-			if(v4l2_ioctl(curr_dev->fd, VIDIOC_G_CTRL, &c)==0) {
-				if ((ctrl.type == V4L2_CTRL_TYPE_INTEGER) || 
-				     (ctrl.type == V4L2_CTRL_TYPE_BOOLEAN) ||
-				     (ctrl.type == V4L2_CTRL_TYPE_MENU))
-					j++;
-				}
-     		
-		} while(0 == v4l2_ioctl (curr_dev->fd, VIDIOC_QUERYCTRL, &ctrl));
-	} else {
-		for(k=V4L2_CID_BASE; k<V4L2_CID_LASTP1; k++) {
-			ctrl.id = k;
-			if(v4l2_ioctl(curr_dev->fd, VIDIOC_QUERYCTRL, &ctrl) == 0) 
-				if(ctrl.flags & V4L2_CTRL_FLAG_DISABLED)
-					continue;
-
-			c.id = k;
-			if(v4l2_ioctl(curr_dev->fd, VIDIOC_G_CTRL, &c)==0) {
-				if ((ctrl.type == V4L2_CTRL_TYPE_INTEGER) || 
-				     (ctrl.type == V4L2_CTRL_TYPE_BOOLEAN))
-					j++;
-			} 
-	
-		}
-	}
-        /* Check any custom controls */
-	for(m=V4L2_CID_PRIVATE_BASE; ; m++) {
-		ctrl.id = m;
-		if(v4l2_ioctl(curr_dev->fd, VIDIOC_QUERYCTRL, &ctrl) == 0) {
-			if(ctrl.flags & V4L2_CTRL_FLAG_DISABLED) 
-				continue;
-
-		c.id = m;
-		if(v4l2_ioctl(curr_dev->fd, VIDIOC_G_CTRL, &c)==0) {
-			if ((ctrl.type == V4L2_CTRL_TYPE_INTEGER) || 
-			     (ctrl.type == V4L2_CTRL_TYPE_BOOLEAN))
-				j++;
-			}
-
-		} else {
-			break;
-		}
-	}
-	return j;
-}
-
 void v4l2_reset_defaults(void)
 {
+  GList *elem;
 
-	v4l2_reset_list_to_default();
-	v4l2_list_print();	
-	g_warning("defaults");
+  for (elem = g_list_first (gtk_v4l_device_get_controls (curr_dev));
+       elem; elem = g_list_next (elem)) {
+    Gtkv4lControl *control = GTK_V4L_CONTROL (elem->data);
 
-//	expanded = gtk_expander_get_expanded(GTK_EXPANDER(advanced_window));
-
-//	gtk_widget_destroy(GTK_WIDGET(table));
-//	curr_controls=0;
-//	v4l2_control_panel_create();
-//	gtk_widget_show_all(GTK_WIDGET(table));
-
+    switch (control->type) {
+    case V4L2_CTRL_TYPE_INTEGER:
+      gtk_range_set_value (GTK_RANGE (control->user_data),
+                           control->default_value);
+      break;
+    case V4L2_CTRL_TYPE_BOOLEAN:
+      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (control->user_data),
+                                    control->default_value);
+      break;
+    case V4L2_CTRL_TYPE_MENU:
+      gtk_combo_box_set_active (GTK_COMBO_BOX (control->user_data),
+                                control->default_value);
+      break;
+    case V4L2_CTRL_TYPE_BUTTON:
+      /* do nothing */
+      break;
+    }
+  }
 }
 
-
-int v4l2_write_to_driver_one(__u32 id,__u32 value, gboolean toggle)
+void v4l2_load_from_driver (void)
 {
-	struct v4l2_queryctrl ctrl;
-	struct v4l2_control c;
+  GList *elem;
 
-//	v4l2_list_print();
-	ctrl.id=id;
-	if(v4l2_ioctl(curr_dev->fd, VIDIOC_QUERYCTRL, &ctrl) == 0) {
-		if(ctrl.flags & (V4L2_CTRL_FLAG_READ_ONLY |
-			         V4L2_CTRL_FLAG_DISABLED |
-	                         V4L2_CTRL_FLAG_GRABBED)) {
-					g_warning("Unable to reset property id: %d",(int)id);
-					return EXIT_FAILURE;
-				}
-		c.id = id;
-		if (toggle)
-			c.value = 0xffffffff;
-		else
-			c.value = value;
+  for (elem = g_list_first (gtk_v4l_device_get_controls (curr_dev));
+       elem; elem = g_list_next (elem)) {
+    Gtkv4lControl *control = GTK_V4L_CONTROL (elem->data);
 
-		if(v4l2_ioctl(curr_dev->fd, VIDIOC_S_CTRL, &c) != 0) {
-			fprintf(stderr, "\nFailed to set control \"%s\": %s\n Setting id=%d and value=%d",
-                        ctrl.name, strerror(errno),c.id, c.value);
-		return EXIT_FAILURE;
-		}
-	} else {
-		g_message( "Error querying control %s\n", strerror(errno));
-		return EXIT_FAILURE;
-		
-		}
-	
-	return EXIT_SUCCESS;
-}
-
-int v4l2_write_to_driver(void)
-{
-	GList *l;
-	struct v4l2_queryctrl ctrl;
-	struct v4l2_control c;
-	struct v4l2_property *s;	
-
-//	v4l2_list_print();
-
-	for (l=list; l; l=l->next) {
-		s=l->data;
-		ctrl.id=s->id;
-		if(v4l2_ioctl(curr_dev->fd, VIDIOC_QUERYCTRL, &ctrl) == 0) {
-		        if(ctrl.flags & (V4L2_CTRL_FLAG_READ_ONLY |
-                        V4L2_CTRL_FLAG_DISABLED |
-                        V4L2_CTRL_FLAG_GRABBED)) {
-		                continue;
-			}
-			if(ctrl.type != V4L2_CTRL_TYPE_INTEGER &&
-			ctrl.type != V4L2_CTRL_TYPE_BOOLEAN &&
-			ctrl.type != V4L2_CTRL_TYPE_MENU) {
-		                continue;
-			}
-			c.id = s->id;
-			c.value = s->value;
-			if(v4l2_ioctl(curr_dev->fd, VIDIOC_S_CTRL, &c) != 0) {
-				fprintf(stderr, "\nFailed to set control \"%s\": %s\n Setting id=%d and value=%d",
-				ctrl.name, strerror(errno),c.id, c.value);
-				continue;
-				}
-			}		
-		else {
-			g_message( "Error querying control %s\n", strerror(errno));
-			return EXIT_FAILURE;
-			}
-		}				
-	return EXIT_SUCCESS;
-}
-
-void v4l2_load_from_driver (int fd, gboolean advanced)
-{
-	struct v4l2_queryctrl ctrl;
-	struct v4l2_control c;
-	int j,m;
-
-	ctrl.id = V4L2_CTRL_FLAG_NEXT_CTRL;
-	if(0 == ioctl (fd, VIDIOC_QUERYCTRL, &ctrl)) {
-		do {
-			c.id = ctrl.id;
-			if(ctrl.flags & V4L2_CTRL_FLAG_DISABLED) 
-		                continue;
-			
-			if (ctrl.type == V4L2_CTRL_TYPE_BUTTON)
-				v4l2_add_control(ctrl,c,advanced);
-			else {
-				if(v4l2_ioctl(fd, VIDIOC_G_CTRL, &c)==0)	
-					v4l2_add_control(ctrl,c,advanced);
-				}
-				
-			ctrl.id |= V4L2_CTRL_FLAG_NEXT_CTRL;
-
-		} while(0 == v4l2_ioctl (fd, VIDIOC_QUERYCTRL, &ctrl));
-	} else {
-		for(j=V4L2_CID_BASE; j<V4L2_CID_LASTP1; j++) {
-			ctrl.id = j;
-			if(v4l2_ioctl(fd, VIDIOC_QUERYCTRL, &ctrl) == 0) 
-				if(ctrl.flags & V4L2_CTRL_FLAG_DISABLED)
-					continue;
-
-			c.id = j;
-                        if (ctrl.type == V4L2_CTRL_TYPE_BUTTON)
-                                v4l2_add_control(ctrl,c,advanced);
-                        else {
-                                if(v4l2_ioctl(fd, VIDIOC_G_CTRL, &c)==0)
-                                        v4l2_add_control(ctrl,c,advanced);
-                                }
-	
-		}
-	}
-        /* Check any custom controls */
-	for(m=V4L2_CID_PRIVATE_BASE; ; m++) {
-		ctrl.id = m;
-		if(v4l2_ioctl(fd, VIDIOC_QUERYCTRL, &ctrl) == 0) {
-			if(ctrl.flags & V4L2_CTRL_FLAG_DISABLED) 
-				continue;
-
-		c.id = m;
-                       if (ctrl.type == V4L2_CTRL_TYPE_BUTTON)
-                                v4l2_add_control(ctrl,c,advanced);
-                        else {
-                                if(v4l2_ioctl(fd, VIDIOC_G_CTRL, &c)==0)
-                                        v4l2_add_control(ctrl,c,advanced);
-                                }
-
-		} else {
-			break;
-		}
-	}
+    v4l2_add_control (control);
+  }
 }
 
 void v4l2_control_panel_create_properties(void)
 {
-	controls = v4l2_count_controls();
 	advanced_window = gtk_expander_new("More properties");
 
-	gtk_expander_set_expanded(GTK_EXPANDER(advanced_window),expanded);
+	gtk_expander_set_expanded(GTK_EXPANDER(advanced_window), FALSE);
 
 	table = GTK_TABLE(gtk_table_new(1,3,FALSE));
 
-	fprintf(stderr, "controls = %d", controls);
-	if (controls > MAX_CONTROLS_ON_MAIN_PAGE) {
+        /* FIXME */
+	if (FALSE) {
 		table2 = GTK_TABLE(gtk_table_new(rownum_advanced, 3, FALSE));
 		gtk_container_add (GTK_CONTAINER(advanced_window), GTK_WIDGET(table2));
 
-		v4l2_load_from_driver (curr_dev->fd,TRUE);
+		v4l2_load_from_driver ();
 		v4l2_add_footer (TRUE);
 
 	} else {
-		v4l2_load_from_driver (curr_dev->fd, FALSE);
+		v4l2_load_from_driver ();
 		v4l2_add_footer (FALSE);			
 		}
 
-	
-
         gtk_table_attach (GTK_TABLE(main_table),GTK_WIDGET(table), 0,2,rownum, rownum+1,GTK_FILL, GTK_FILL, 0, 5);
-	
 }
 
 void v4l2_control_panel_create (Gtkv4lDevice *device)
@@ -718,17 +389,11 @@ v4l2_combo_remove_device(Gtkv4lDevice *device, int idx)
 
 void v4l2_switch_to_new_device(Gtkv4lDevice *device)
 {
-	v4l2_list_reset();
-	started_cb = FALSE;
-
 	curr_dev = device;
 	v4l2_add_header_populate(device);
 	gtk_widget_destroy(GTK_WIDGET(table));
-	curr_controls=0;
 	v4l2_control_panel_create_properties();
-	started_cb = TRUE;
 	gtk_widget_show_all(GTK_WIDGET(table));
-
 }
 
 void v4l2_combo_change_device_cb (GtkWidget *wid, gpointer user_data)
@@ -784,8 +449,6 @@ int main(int argc, char *argv[])
           return EXIT_FAILURE;
   }
 
-  printf("curr_dev: %s\n", curr_dev->card);
-
   window = gtk_dialog_new();
   gtk_window_set_title(GTK_WINDOW(window), "GTK V4L Device properties");
   gtk_window_set_resizable (GTK_WINDOW(window), FALSE);
@@ -809,23 +472,7 @@ int main(int argc, char *argv[])
 
   gtk_widget_show_all (window);
 
- v4l2_list_print();
-  started_cb = TRUE;
-//  dialog_result = gtk_dialog_run(GTK_DIALOG(window));
-/*  
-  switch(dialog_result)	{
-	case GTK_RESPONSE_APPLY:
-		v4l2_driver_load_defaults();
-		break;
-
-	case GTK_RESPONSE_CLOSE:
-		v4l2_close(fd);
-		gtk_widget_destroy(window);
-		break;		
-	}
-*/
-
-	gtk_main();
+  gtk_main();
   return 0;
 	
 

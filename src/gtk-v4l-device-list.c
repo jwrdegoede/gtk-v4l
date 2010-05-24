@@ -39,7 +39,7 @@ G_DEFINE_TYPE (Gtkv4lDeviceList, gtk_v4l_device_list, G_TYPE_OBJECT);
     
 
 static void
-gtk_v4l_device_free_device (gpointer data, gpointer user_data)
+gtk_v4l_device_list_free_device (gpointer data, gpointer user_data)
 {
   g_object_unref (data);
 }
@@ -49,7 +49,7 @@ gtk_v4l_device_list_finalize (GObject *object)
 {
   Gtkv4lDeviceList *self = GTK_V4L_DEVICE_LIST (object);
 
-  g_list_foreach (self->list, gtk_v4l_device_free_device, NULL);
+  g_list_foreach (self->list, gtk_v4l_device_list_free_device, NULL);
   g_list_free (self->list);
 
   g_object_unref (self->priv->udev);

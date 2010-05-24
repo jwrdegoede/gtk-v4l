@@ -39,56 +39,22 @@
 
 #include "gtk-v4l-device.h"
 
-#define MAX_CONTROLS_ON_MAIN_PAGE 8
-#define MIN_CONTROLS_ON_MAIN_PAGE 6
 #define ICON_LOC "/usr/share/icons/gnome/24x24/devices/camera-web.png"
 
-struct v4l2_property {
-	__u32 id;
-	__s32 value;
-	__s32 def;
-	GtkWidget *w;
-	int ctrl_type;
-};
-
-/* Functions to manage lists */
-void v4l2_list_add (__u32 id, __s32 value,__s32 def,GtkWidget *w, int ctrl_type);
-gboolean v4l2_list_edit_element (__u32 id, __s32 value);
-void v4l2_list_print(void); /*Used only for debugging */
-void v4l2_list_destroy(void);
-void v4l2_reset_list_to_default();
-void v4l2_combo_list_print(void);
-
-
-
 /* Functions to talk to the driver */
-int v4l2_count_controls(void);
-int v4l2_write_to_driver(void);
-void v4l2_load_from_driver (int fd, gboolean advanced);
-int v4l2_write_to_driver_one(__u32 id,__u32 value, gboolean toggle);
 void v4l2_switch_to_new_device(Gtkv4lDevice *device);
 
-
 /* Callbacks */
-void close_cb(GtkWidget *widget, gpointer user_data);
 void destroy(GtkWidget *widget, gpointer user_data);
 void bool_control_changed_cb (GtkButton *button, gpointer user_data);
 void advanced_cb (GtkWidget *widget, gpointer user_data);
 void int_control_changed_cb (GtkRange *range, gpointer user_data);
 void v4l2_combo_change_device_cb (GtkWidget *wid, gpointer user_data);
 
-
 /* Functions used to display the window */
-void v4l2_add_int_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboolean advanced);
-void v4l2_add_bool_control (struct v4l2_queryctrl ctrl,struct v4l2_control c,gboolean advanced);
-void v4l2_add_control (struct v4l2_queryctrl ctrl, struct v4l2_control c,gboolean advanced);
 void v4l2_add_header (Gtkv4lDevice *device);
 void v4l2_control_panel_create (Gtkv4lDevice *device);
 void v4l2_add_footer (gboolean advanced);
 void v4l2_add_dialog_buttons(void);
-
-
-
-void v4l2_add_footer (gboolean advanced);
 
 #endif /* _GTK_V4L2_ */

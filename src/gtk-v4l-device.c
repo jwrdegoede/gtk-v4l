@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <libv4l2.h>
 #include <linux/videodev2.h>
+#include "gtk-v4l-control.h"
 #include "gtk-v4l-device.h"
 
 #define GTK_V4L_DEVICE_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GTK_V4L_TYPE_DEVICE, Gtkv4lDevicePrivate))
@@ -38,7 +39,7 @@ enum
 };
 
 struct _Gtkv4lDevicePrivate {
-  gint placeholder;
+  GList *controls;
 };
 
 /* will create gtk_v4l_device_get_type and set gtk_v4l_device_parent_class */
@@ -108,8 +109,8 @@ gtk_v4l_device_constructor (GType                  gtype,
                             GObjectConstructParam *properties)
 {
   GObject *obj;
-  struct v4l2_capability cap;
   Gtkv4lDevice *self;
+  struct v4l2_capability cap;
 
   {
     /* Always chain up to the parent constructor */
@@ -142,9 +143,18 @@ gtk_v4l_device_constructor (GType                  gtype,
                                   (cap.version >>  8) & 0xff, 
                                   (cap.version >>  0) & 0xff);
 
-  printf("constructed device: %s\n", self->card);
-
   return obj;
+}
+
+static void
+gtk_v4l_device_free_control (gpointer data, gpointer user_data)
+{
+  Gtkv4lControl *control = GTK_V4L_CONTROL (data);
+  
+  /* We are going to close the fd, so set it to -1 in case others still hold
+     a reference to the control. */
+  control->fd = -1;
+  g_object_unref (control);
 }
 
 static void
@@ -152,8 +162,17 @@ gtk_v4l_device_finalize (GObject *object)
 {
   Gtkv4lDevice *self = GTK_V4L_DEVICE (object);
 
+  g_list_foreach (self->priv->controls, gtk_v4l_device_free_control, NULL);
+  g_list_free (self->priv->controls);
+
   if (self->fd != -1)
     close (self->fd);
+
+  g_free (self->device_file);
+  g_free (self->driver);
+  g_free (self->card);
+  g_free (self->bus_info);
+  g_free (self->version);
 }
 
 static void
@@ -220,4 +239,66 @@ gtk_v4l_device_init (Gtkv4lDevice *self)
   /* initialize the object */
   self->fd = -1;
   self->priv = priv = GTK_V4L_DEVICE_GET_PRIVATE(self);
+}
+
+GList *
+gtk_v4l_device_get_controls (Gtkv4lDevice *self)
+{
+  Gtkv4lControl *control;
+  struct v4l2_queryctrl query;
+  int i;
+  
+  if (self->priv->controls)
+    return self->priv->controls;
+
+  /* Check if the driver supports V4L2_CTRL_FLAG_NEXT_CTRL, if not do some
+     "brute force" control enumeration. */
+  query.id = V4L2_CTRL_FLAG_NEXT_CTRL;
+  if (v4l2_ioctl (self->fd, VIDIOC_QUERYCTRL, &query) != -1) {
+    do {
+      if (query.flags & V4L2_CTRL_FLAG_DISABLED) {
+        query.id |= V4L2_CTRL_FLAG_NEXT_CTRL;
+        continue;
+      }
+
+      control = g_object_new (GTK_V4L_TYPE_CONTROL,
+                              "fd", self->fd,
+                              "query_result", &query,
+                              NULL);
+      self->priv->controls = g_list_append (self->priv->controls, control);
+      query.id |= V4L2_CTRL_FLAG_NEXT_CTRL;
+    } while(v4l2_ioctl (self->fd, VIDIOC_QUERYCTRL, &query) != -1);
+  } else {
+    for (i = V4L2_CID_BASE; i < V4L2_CID_LASTP1; i++) {
+      query.id = i;
+      if (v4l2_ioctl (self->fd, VIDIOC_QUERYCTRL, &query) == -1)
+        continue;
+
+      if (query.flags & V4L2_CTRL_FLAG_DISABLED)
+        continue;
+
+      control = g_object_new (GTK_V4L_TYPE_CONTROL,
+                              "fd", self->fd,
+                              "query_result", &query,
+                              NULL);
+      self->priv->controls = g_list_append (self->priv->controls, control);
+    }
+
+    for (i = V4L2_CID_PRIVATE_BASE; ; i++) {
+      query.id = i;
+      if (v4l2_ioctl (self->fd, VIDIOC_QUERYCTRL, &query) == -1)
+        break;
+
+      if (query.flags & V4L2_CTRL_FLAG_DISABLED)
+        continue;
+
+      control = g_object_new (GTK_V4L_TYPE_CONTROL,
+                              "fd", self->fd,
+                              "query_result", &query,
+                              NULL);
+      self->priv->controls = g_list_append (self->priv->controls, control);
+    }
+  }
+
+  return self->priv->controls;
 }
