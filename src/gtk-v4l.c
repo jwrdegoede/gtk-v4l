@@ -48,7 +48,8 @@ void close_cb (GtkWidget *w, gpointer user_data)
 
 void reset_cb (GtkButton *button, gpointer user_data)
 {
-  Gtkv4lWidget *widget = GTK_V4L_WIDGET (user_data);
+  gpointer *widgetp = user_data;
+  Gtkv4lWidget *widget = GTK_V4L_WIDGET (*widgetp);
   
   gtk_v4l_widget_reset_to_defaults (widget);
 }
@@ -87,7 +88,7 @@ void v4l2_add_dialog_buttons(void)
 	GtkWidget *button;
 
         button = gtk_dialog_add_button ( GTK_DIALOG (window), "_Defaults", GTK_RESPONSE_APPLY);
-        g_signal_connect(G_OBJECT(button),"clicked", G_CALLBACK(reset_cb), controls);
+        g_signal_connect(G_OBJECT(button),"clicked", G_CALLBACK(reset_cb), &controls);
 
         button = gtk_dialog_add_button ( GTK_DIALOG (window), GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE);
         g_signal_connect(G_OBJECT(button),"clicked", G_CALLBACK(close_cb), NULL);
