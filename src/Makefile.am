@@ -7,7 +7,9 @@ gtk_v4l_SOURCES = gtk-v4l.c \
 		  gtk-v4l-device.c \
 		  gtk-v4l-device.h \
 		  gtk-v4l-device-list.c \
-		  gtk-v4l-device-list.h
+		  gtk-v4l-device-list.h \
+		  gtk-v4l-widget.c \
+		  gtk-v4l-widget.h
 gtk_v4l_CFLAGS = \
         $(GTK_CFLAGS)        \
         $(V4L_CFLAGS)     \
