@@ -114,7 +114,6 @@ gtk_v4l_device_constructor (GType                  gtype,
 
   {
     /* Always chain up to the parent constructor */
-    Gtkv4lDeviceClass *klass;
     GObjectClass *parent_class;  
     parent_class = G_OBJECT_CLASS (gtk_v4l_device_parent_class);
     obj = parent_class->constructor (gtype, n_properties, properties);
@@ -135,9 +134,9 @@ gtk_v4l_device_constructor (GType                  gtype,
     return obj;
   }
   
-  self->driver  = g_strdup(cap.driver);
-  self->card    = g_strdup(cap.card);
-  self->bus_info = g_strdup(cap.bus_info);
+  self->driver  = g_strdup((gchar *)cap.driver);
+  self->card    = g_strdup((gchar *)cap.card);
+  self->bus_info = g_strdup((gchar *)cap.bus_info);
   self->version = g_strdup_printf("%d.%d.%d",
                                   (cap.version >> 16) & 0xff, 
                                   (cap.version >>  8) & 0xff, 
@@ -233,7 +232,6 @@ gtk_v4l_device_class_init (Gtkv4lDeviceClass *klass)
 static void
 gtk_v4l_device_init (Gtkv4lDevice *self)
 {
-  const gchar *const subsystems[] = {"video4linux", NULL};
   Gtkv4lDevicePrivate *priv;
 
   /* initialize the object */

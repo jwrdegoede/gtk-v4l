@@ -59,6 +59,7 @@ struct _Gtkv4lControlClass {
   /* class members */
 };
 
+GType gtk_v4l_control_get_type (void);
 void gtk_v4l_control_set (Gtkv4lControl *control, gint value);
 gint gtk_v4l_control_get (Gtkv4lControl *control);
 /* Force re-reading of control properties and value from the driver / hw */

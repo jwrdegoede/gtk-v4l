@@ -102,8 +102,7 @@ int_control_format_cb (GtkScale *scale, gdouble value, gpointer user_data)
 GtkWidget *v4l2_create_int_widget (Gtkv4lControl *control)
 {  
   GtkWidget *HScale;
-  gint min, max, step,def;
-  min = control->minimum; max = control->maximum; step = control->step;
+  gint min = control->minimum, max = control->maximum, step = control->step;
 
   HScale = gtk_hscale_new_with_range (min,max,step);
   gtk_scale_set_value_pos (GTK_SCALE(HScale), GTK_POS_RIGHT);
@@ -164,7 +163,7 @@ GtkWidget *v4l2_create_menu_widget (Gtkv4lControl *control)
           qm.id = control->id;
           qm.index = k;
           /* FIXME */
-    if(ioctl(fd, VIDIOC_QUERYMENU, &qm) == 0) 
+    if(v4l2_ioctl(fd, VIDIOC_QUERYMENU, &qm) == 0) 
       gtk_combo_box_append_text (GTK_COMBO_BOX(combo), (const gchar *) qm.name);
     else
       g_warning ("Unable to use menu item for :%d", qm.index);
@@ -203,12 +202,10 @@ gtk_v4l_widget_constructor (GType                  gtype,
   GList *elem;
   Gtkv4lWidget *self;
   GtkWidget *control_widget, *label, *align, *advanced_table = NULL;
-  struct v4l2_capability cap;
   int rownum = 0, rownum_advanced = 0;
 
   {
     /* Always chain up to the parent constructor */
-    Gtkv4lWidgetClass *klass;
     GObjectClass *parent_class;
     parent_class = G_OBJECT_CLASS (gtk_v4l_widget_parent_class);
     obj = parent_class->constructor (gtype, n_properties, properties);
@@ -317,7 +314,6 @@ gtk_v4l_widget_class_init (Gtkv4lWidgetClass *klass)
 static void
 gtk_v4l_widget_init (Gtkv4lWidget *self)
 {
-  const gchar *const subsystems[] = {"video4linux", NULL};
   Gtkv4lWidgetPrivate *priv;
 
   /* initialize the object */

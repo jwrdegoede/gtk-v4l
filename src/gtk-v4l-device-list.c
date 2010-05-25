@@ -20,6 +20,7 @@
  *
  */
 
+#include <string.h>
 #include <gudev/gudev.h>
 #include "gtk-v4l-device-list.h"
 
@@ -84,8 +85,6 @@ gtk_v4l_device_list_add_dev (Gtkv4lDeviceList *self,
 {
   Gtkv4lDevice       *device;
   const gchar        *device_file;
-  const gchar        *devpath;
-  const gchar        *product_name;
 
   device_file = g_udev_device_get_device_file (udevice);
   if (device_file == NULL)

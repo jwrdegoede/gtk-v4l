@@ -26,6 +26,19 @@
 
 #define ICON_LOC "/usr/share/icons/gnome/24x24/devices/camera-web.png"
 
+static void show_error_dialog (const gchar *error)
+{
+  GtkWidget *dialog;
+  dialog = gtk_message_dialog_new (NULL,
+                                   GTK_DIALOG_DESTROY_WITH_PARENT,
+                                   GTK_MESSAGE_ERROR,
+                                   GTK_BUTTONS_CLOSE, 
+                                   error);
+
+  gtk_dialog_run (GTK_DIALOG (dialog));
+  gtk_widget_destroy (dialog);
+}
+
 Gtkv4lDeviceList *devlist;
 Gtkv4lDevice *curr_dev = NULL;
 GtkWidget *window,*dev_combo;
@@ -139,7 +152,6 @@ int main(int argc, char *argv[])
 {
   GError *error = NULL;
   GdkPixbuf *icon_pixbuf = NULL;
-  gchar *error_string;
 
   GOptionContext* context = g_option_context_new("- Gtk V4l app");
   g_option_context_add_main_entries (context,entries, NULL);

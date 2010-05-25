@@ -149,12 +149,10 @@ gtk_v4l_control_constructor (GType                  gtype,
                              GObjectConstructParam *properties)
 {
   GObject *obj;
-  struct v4l2_capability cap;
   Gtkv4lControl *self;
 
   {
     /* Always chain up to the parent constructor */
-    Gtkv4lControlClass *klass;
     GObjectClass *parent_class;  
     parent_class = G_OBJECT_CLASS (gtk_v4l_control_parent_class);
     obj = parent_class->constructor (gtype, n_properties, properties);
@@ -311,7 +309,6 @@ gtk_v4l_control_class_init (Gtkv4lControlClass *klass)
 static void
 gtk_v4l_control_init (Gtkv4lControl *self)
 {
-  const gchar *const subsystems[] = {"video4linux", NULL};
   Gtkv4lControlPrivate *priv;
 
   /* initialize the object */
@@ -327,7 +324,7 @@ gtk_v4l_control_handle_query_result (Gtkv4lControl *self,
 
   self->id            = query->id;
   self->type          = query->type;
-  self->name          = g_strdup(query->name);
+  self->name          = g_strdup((gchar *)query->name);
   self->minimum       = query->minimum;
   self->maximum       = query->maximum;
   self->step          = query->step;

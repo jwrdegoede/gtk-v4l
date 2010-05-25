@@ -49,6 +49,7 @@ struct _Gtkv4lWidgetClass {
   /* class members */
 };
 
+GType gtk_v4l_widget_get_type (void);
 GtkWidget *gtk_v4l_widget_new (Gtkv4lDevice *device);
 void gtk_v4l_widget_reset_to_defaults (Gtkv4lWidget *self);
 

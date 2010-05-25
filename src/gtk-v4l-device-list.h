@@ -55,6 +55,7 @@ struct _Gtkv4lDeviceListClass {
   /* class members */
 };
 
+GType gtk_v4l_device_list_get_type (void);
 void gtk_v4l_device_list_coldplug (Gtkv4lDeviceList *self);
 Gtkv4lDevice *gtk_v4l_device_list_get_dev_by_device_file (
   Gtkv4lDeviceList *self, const gchar *device_file);
