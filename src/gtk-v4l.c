@@ -28,13 +28,10 @@
 
 Gtkv4lDeviceList *devlist;
 Gtkv4lDevice *curr_dev = NULL;
-GtkWidget *window,*advanced_window,*dev_combo;
-GtkTable *main_table,*table,*table2=NULL;
-GtkWidget *content_area,*content_area2;
+GtkWidget *window,*dev_combo;
+GtkTable *main_table;
+GtkWidget *content_area;
 GtkWidget *controls;
-
-GtkWidget  *label_driver, *label_card, *label_bus;
-
 gchar *device = NULL;
 
 GOptionEntry entries[] =
@@ -58,75 +55,29 @@ void reset_cb (GtkButton *button, gpointer user_data)
 
 void v4l2_add_header_init ()
 {
-//	const char *driver, *card, *bus_info;
-	GtkWidget *sep,*label,*align;
-
-//	driver = (const char *)cap.driver;
-//	card = (const char *)cap.card;
-//	bus_info = (const char *)cap.bus_info;
+	GtkWidget *sep, *label, *align;
 
 	label = gtk_label_new ("Device");
         align = gtk_alignment_new (0.0,0.5,0.0,0.0);
         gtk_container_add (GTK_CONTAINER(align), label);
         gtk_table_attach (GTK_TABLE(main_table), align, 0,1,0,1,GTK_FILL,GTK_FILL,5,5);//, GTK_EXPAND, GTK_SHRINK, 5, 5);    
 
-
         align = gtk_alignment_new (0.0,0.5,0.0,0.0);
         gtk_container_add (GTK_CONTAINER(align), dev_combo);
-        gtk_table_attach (GTK_TABLE(main_table), align, 1,2,0,1,GTK_FILL,GTK_FILL,5,5);//, GTK_EXPAND, GTK_SHRINK, 5, 5);    
+        gtk_table_attach (GTK_TABLE(main_table), align, 1,2,0,1,GTK_FILL,GTK_FILL,5,5);
 
-	label = gtk_label_new ("Driver");
-	align = gtk_alignment_new (0.0,0.5,0.0,0.0);
-	gtk_container_add (GTK_CONTAINER(align), label);
-	gtk_table_attach (GTK_TABLE(main_table), align, 0,1,1,2,GTK_FILL,GTK_FILL,5,5);//, GTK_EXPAND, GTK_SHRINK, 5, 5);	
-       
-	 
-	label_driver = gtk_label_new ("");
-	align = gtk_alignment_new (0.0,0.5,0.0,0.0);
-        gtk_container_add (GTK_CONTAINER(align), label_driver);
-        gtk_table_attach (GTK_TABLE(main_table), align, 1,2,1,2, GTK_FILL, GTK_FILL, 5, 5);
-
-        label = gtk_label_new ("Card");
-        align = gtk_alignment_new (0.0,0.5,0.0,0.0);
-        gtk_container_add (GTK_CONTAINER(align), label);
-        gtk_table_attach (GTK_TABLE(main_table), align, 0,1,2,3, GTK_FILL, GTK_FILL, 5, 5);
-
-        label_card = gtk_label_new ("");
-        align = gtk_alignment_new (0.0,0.5,0.0,0.0);
-        gtk_container_add (GTK_CONTAINER(align), label_card);
-        gtk_table_attach (GTK_TABLE(main_table), align, 1,2,2,3, GTK_FILL, GTK_FILL, 5, 5);
-
-        label = gtk_label_new ("Bus Information");
-        align = gtk_alignment_new (0.0,0.5,0.0,0.0);
-        gtk_container_add (GTK_CONTAINER(align), label);
-        gtk_table_attach (GTK_TABLE(main_table), align, 0,1,3,4, GTK_FILL, GTK_FILL, 5, 5);
-
-        label_bus = gtk_label_new ("");
-        align = gtk_alignment_new (0.0,0.5,0.0,0.0);
-        gtk_container_add (GTK_CONTAINER(align), label_bus);
-        gtk_table_attach (GTK_TABLE(main_table), align, 1,2,3,4, GTK_FILL, GTK_FILL, 5, 5);
-	
 	sep = gtk_hseparator_new();
-	gtk_table_attach (GTK_TABLE(main_table), sep, 0,4,4,5, GTK_FILL, GTK_FILL, 0, 0);
+	gtk_table_attach (GTK_TABLE(main_table), sep, 0,2,1,2, GTK_FILL, GTK_FILL, 0, 0);
 	
-}
-
-void
-v4l2_add_header_populate(Gtkv4lDevice *device)
-{
-	gtk_label_set_text(GTK_LABEL(label_driver), device->driver);
-	gtk_label_set_text(GTK_LABEL(label_card), device->card);
-	gtk_label_set_text(GTK_LABEL(label_bus), device->bus_info);
 }
 
 void v4l2_control_panel_create (Gtkv4lDevice *device)
 {
-	main_table = GTK_TABLE(gtk_table_new (5, 2, FALSE));
+	main_table = GTK_TABLE(gtk_table_new (3, 2, FALSE));
 	v4l2_add_header_init();
-	v4l2_add_header_populate(device);
 
         controls = gtk_v4l_widget_new (device);
-        gtk_table_attach (GTK_TABLE(main_table), controls, 0, 2, 5, 6, GTK_FILL, GTK_FILL, 0, 5);
+        gtk_table_attach (GTK_TABLE(main_table), controls, 0, 2, 2, 3, GTK_FILL, GTK_FILL, 0, 5);
 	
 	gtk_container_add (GTK_CONTAINER(content_area),GTK_WIDGET(main_table));
 }
@@ -160,7 +111,6 @@ v4l2_combo_remove_device(Gtkv4lDevice *device, int idx)
 void v4l2_switch_to_new_device(Gtkv4lDevice *device)
 {
 	curr_dev = device;
-	v4l2_add_header_populate(device);
 	gtk_widget_destroy(controls);
         controls = gtk_v4l_widget_new (device);
         gtk_table_attach (GTK_TABLE(main_table), controls, 0, 2, 5, 6, GTK_FILL, GTK_FILL, 0, 5);
