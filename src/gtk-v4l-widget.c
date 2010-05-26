@@ -250,8 +250,7 @@ fd = self->device->fd;
     align = gtk_alignment_new (0.0,0.5,0.0,0.0);
     gtk_container_add (GTK_CONTAINER(align), control_widget);
 
-    /* FIXME */
-    if (FALSE) {
+    if (gtk_v4l_control_is_advanced (control)) {
        rownum_advanced++;
        if (!advanced_table)
          advanced_table = gtk_table_new(rownum_advanced, 2, FALSE);

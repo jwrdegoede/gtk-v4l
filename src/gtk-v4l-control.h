@@ -64,5 +64,6 @@ void gtk_v4l_control_set (Gtkv4lControl *control, gint value);
 gint gtk_v4l_control_get (Gtkv4lControl *control);
 /* Force re-reading of control properties and value from the driver / hw */
 void gtk_v4l_control_update (Gtkv4lControl *self);
+gboolean gtk_v4l_control_is_advanced (Gtkv4lControl *self);
 
 #endif

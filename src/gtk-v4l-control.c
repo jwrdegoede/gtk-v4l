@@ -389,3 +389,36 @@ gtk_v4l_control_update (Gtkv4lControl *self)
   gtk_v4l_control_query (self);
   self->priv->value_valid = FALSE;  
 }
+
+gboolean
+gtk_v4l_control_is_advanced (Gtkv4lControl *self)
+{
+  switch (self->id) {
+  case V4L2_CID_BRIGHTNESS:
+  case V4L2_CID_CONTRAST:
+  case V4L2_CID_SATURATION:
+  case V4L2_CID_HUE:
+  case V4L2_CID_GAMMA:
+  case V4L2_CID_HFLIP:
+  case V4L2_CID_VFLIP:
+  case V4L2_CID_POWER_LINE_FREQUENCY:
+
+  case V4L2_CID_PAN_RELATIVE:
+  case V4L2_CID_TILT_RELATIVE:
+  case V4L2_CID_PAN_RESET:
+  case V4L2_CID_TILT_RESET:
+  case V4L2_CID_PAN_ABSOLUTE:
+  case V4L2_CID_TILT_ABSOLUTE:
+
+  case V4L2_CID_FOCUS_ABSOLUTE:
+  case V4L2_CID_FOCUS_RELATIVE:
+  case V4L2_CID_FOCUS_AUTO:
+
+  case V4L2_CID_ZOOM_ABSOLUTE:
+  case V4L2_CID_ZOOM_RELATIVE:
+  case V4L2_CID_ZOOM_CONTINUOUS:
+    return FALSE;
+  }
+  /* Everything else is considered advanced */
+  return TRUE;
+}
