@@ -49,6 +49,8 @@ struct _Gtkv4lControl {
   gint32 step;
   gint32 default_value;
   guint32 flags;
+  /* Menu entries for menu type controls */
+  GList *menu_entries;
   /* For users of the control to associate their own data with the control */
   gpointer user_data;
   Gtkv4lControlPrivate *priv;

@@ -149,25 +149,16 @@ void menu_control_changed_cb (GtkWidget *wid, gpointer user_data)
   /* FIXME read back actual resulting value and update widget */
 }
 
-/* FIXME HACK until menu enumeration is added to Gtkv4lControl */
-static int fd;
-
 GtkWidget *v4l2_create_menu_widget (Gtkv4lControl *control)
 {
   GtkWidget *combo;
-  int k;
+  GList *elem;
 
   combo = gtk_combo_box_new_text();
-  for (k=control->minimum; k<=control->maximum; k++) {
-    struct v4l2_querymenu qm;
-          qm.id = control->id;
-          qm.index = k;
-          /* FIXME */
-    if(v4l2_ioctl(fd, VIDIOC_QUERYMENU, &qm) == 0) 
-      gtk_combo_box_append_text (GTK_COMBO_BOX(combo), (const gchar *) qm.name);
-    else
-      g_warning ("Unable to use menu item for :%d", qm.index);
-  }
+
+  for (elem = g_list_first (control->menu_entries);
+       elem; elem = g_list_next (elem))
+    gtk_combo_box_append_text (GTK_COMBO_BOX(combo), (gchar *) elem->data);
 
   gtk_combo_box_set_active (GTK_COMBO_BOX(combo),
                             gtk_v4l_control_get(control));
@@ -213,9 +204,6 @@ gtk_v4l_widget_constructor (GType                  gtype,
 
   /* update the object state depending on constructor properties */
   self = GTK_V4L_WIDGET (obj);
-
-/* FIXME */
-fd = self->device->fd;
 
   for (elem = g_list_first (gtk_v4l_device_get_controls (self->device));
        elem; elem = g_list_next (elem)) {

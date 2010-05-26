@@ -183,6 +183,12 @@ static void
 gtk_v4l_control_finalize (GObject *object)
 {
   Gtkv4lControl *self = GTK_V4L_CONTROL (object);
+  GList *elem;
+
+  for (elem = g_list_first (self->menu_entries);
+       elem; elem = g_list_next (elem))
+    g_free (elem->data);
+  g_list_free (self->menu_entries);
 
   g_free (self->name);
 }
@@ -330,6 +336,23 @@ gtk_v4l_control_handle_query_result (Gtkv4lControl *self,
   self->step          = query->step;
   self->default_value = query->default_value;
   self->flags         = query->flags;
+
+  if (self->type == V4L2_CTRL_TYPE_MENU && !self->menu_entries) {
+    int i;
+    struct v4l2_querymenu qm = { .id = self->id };
+
+    for (i = 0; i <= self->maximum; i++) {
+      qm.index = i;
+      if (v4l2_ioctl (self->fd, VIDIOC_QUERYMENU, &qm) == 0) {
+        self->menu_entries = g_list_append (self->menu_entries,
+                                            g_strdup ((gchar *)qm.name));
+      } else {
+        self->menu_entries = g_list_append (self->menu_entries,
+                                            g_strdup ("Unknown"));
+        g_warning ("Unable to get menu text for %s index %d", self->name, i);
+      }
+    }
+  }
 }
 
 static void
