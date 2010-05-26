@@ -168,8 +168,9 @@ int main(int argc, char *argv[])
       gtk_combo_box_set_active (GTK_COMBO_BOX(dev_combo),
                                 g_list_index (devlist->list, device));
     else
-      show_error_dialog ("Specified V4L2 device not found");
-  }
+      show_error_dialog ("Specified video device not found");
+  } else if (g_list_length (devlist->list) == 0)
+    show_error_dialog ("No video devices found");
 
   gtk_widget_show_all (window);
 
