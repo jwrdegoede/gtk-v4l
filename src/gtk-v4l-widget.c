@@ -78,18 +78,29 @@ gtk_v4l_widget_get_property (GObject    *object,
   }
 }
 
-void int_control_changed_cb (GtkRange *range, gpointer user_data)
+void int_control_changed_cb (GtkWidget *range, gpointer user_data)
 {
+  static int in_handler = 0;
   Gtkv4lControl *control = GTK_V4L_CONTROL (user_data);
   gdouble value;
 
+  /* We set the widget to what the hardware reports it can actually
+     achieve this may result in recursive calls */
+  if (in_handler)
+    return;
+
   value = gtk_range_get_value (GTK_RANGE (range));
   gtk_v4l_control_set (control, value);
-  /* FIXME read back actual resulting value and update widget */
+
+  /* Set the widget to what the hardware reports as the actual result */
+  value = gtk_v4l_control_get (control);
+  in_handler++;
+  gtk_range_set_value (GTK_RANGE (range), value);
+  in_handler--;
 }
 
 gchar *
-int_control_format_cb (GtkScale *scale, gdouble value, gpointer user_data)
+int_control_format_cb (GtkWidget *scale, gdouble value, gpointer user_data)
 {
   Gtkv4lControl *control = GTK_V4L_CONTROL (user_data);
   gint div = control->maximum - control->minimum;
@@ -116,14 +127,25 @@ GtkWidget *v4l2_create_int_widget (Gtkv4lControl *control)
   return HScale;
 }
 
-void bool_control_changed_cb (GtkButton *button, gpointer user_data)
+void bool_control_changed_cb (GtkWidget *button, gpointer user_data)
 {
+  static int in_handler = 0;
   Gtkv4lControl *control = GTK_V4L_CONTROL (user_data);
   gboolean state;
 
-  state = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON(button));
+  /* We set the widget to what the hardware reports it can actually
+     achieve this may result in recursive calls */
+  if (in_handler)
+    return;
+
+  state = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (button));
   gtk_v4l_control_set (control, state);
-  /* FIXME read back actual resulting value and update widget */
+
+  /* Set the widget to what the hardware reports as the actual result */
+  state = gtk_v4l_control_get (control);
+  in_handler++;
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), state);
+  in_handler--;
 }
 
 GtkWidget *v4l2_create_bool_widget (Gtkv4lControl *control)
@@ -139,14 +161,25 @@ GtkWidget *v4l2_create_bool_widget (Gtkv4lControl *control)
   return check;
 }
 
-void menu_control_changed_cb (GtkWidget *wid, gpointer user_data)
+void menu_control_changed_cb (GtkWidget *combo, gpointer user_data)
 {
+  static int in_handler = 0;
   Gtkv4lControl *control = GTK_V4L_CONTROL (user_data);
   gint value;
 
-  value = gtk_combo_box_get_active(GTK_COMBO_BOX(wid));
+  /* We set the widget to what the hardware reports it can actually
+     achieve this may result in recursive calls */
+  if (in_handler)
+    return;
+
+  value = gtk_combo_box_get_active(GTK_COMBO_BOX (combo));
   gtk_v4l_control_set (control, value);
-  /* FIXME read back actual resulting value and update widget */
+
+  /* Set the widget to what the hardware reports as the actual result */
+  value = gtk_v4l_control_get (control);
+  in_handler++;
+  gtk_combo_box_set_active (GTK_COMBO_BOX (combo), value);
+  in_handler--;
 }
 
 GtkWidget *v4l2_create_menu_widget (Gtkv4lControl *control)
@@ -167,7 +200,7 @@ GtkWidget *v4l2_create_menu_widget (Gtkv4lControl *control)
   return combo;
 }
 
-void button_control_changed_cb (GtkButton *button, gpointer user_data)
+void button_control_changed_cb (GtkWidget *button, gpointer user_data)
 {
   Gtkv4lControl *control = GTK_V4L_CONTROL (user_data);
 
