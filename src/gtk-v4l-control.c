@@ -20,7 +20,9 @@
  *
  */
 
+#include <errno.h>
 #include <fcntl.h>
+#include <string.h>
 #include <libv4l2.h>
 #include <linux/videodev2.h>
 #include "gtk-v4l-device.h"
@@ -43,6 +45,12 @@ enum
   PROP_FLAGS,
 };
 
+enum
+{
+  IO_ERROR_SIGNAL,
+  LAST_SIGNAL,
+};
+    
 struct _Gtkv4lControlPrivate {
   gint value;
   gboolean value_valid;
@@ -57,6 +65,8 @@ gtk_v4l_control_handle_query_result (Gtkv4lControl *self,
                                      const struct v4l2_queryctrl *query);
 static void
 gtk_v4l_control_query (Gtkv4lControl *self);
+
+static guint signals[LAST_SIGNAL] = { 0, };
 
 /* will create gtk_v4l_control_get_type and set gtk_v4l_control_parent_class */
 G_DEFINE_TYPE (Gtkv4lControl, gtk_v4l_control, G_TYPE_OBJECT);
@@ -310,6 +320,17 @@ gtk_v4l_control_class_init (Gtkv4lControlClass *klass)
   g_object_class_install_property (gobject_class,
                                    PROP_FLAGS,
                                    pspec);
+
+  signals[IO_ERROR_SIGNAL] = g_signal_new ("io_error",
+                                         G_TYPE_FROM_CLASS (klass),
+                                         G_SIGNAL_RUN_LAST,
+                                         G_STRUCT_OFFSET (Gtkv4lControlClass, io_error),
+                                         NULL,
+                                         NULL,
+                                         g_cclosure_marshal_VOID__STRING,
+                                         G_TYPE_NONE,
+                                         1,
+                                         G_TYPE_STRING);
 }
 
 static void
@@ -377,10 +398,14 @@ gtk_v4l_control_set (Gtkv4lControl *self, gint value)
     return;
 
   if (v4l2_ioctl (self->fd, VIDIOC_S_CTRL, &ctrl) == -1) {
-    g_warning("set ctrl for id: %u failed", self->id);
+    gchar *error_msg;
+    error_msg = g_strdup_printf ("Error setting %s: %s",
+                                 self->name, strerror (errno));
+    g_signal_emit (self, signals[IO_ERROR_SIGNAL], 0, error_msg);
+    g_free (error_msg);
     return;
   }
-  
+
   /* From the v4l2 api: "VIDIOC_S_CTRL is a write-only ioctl,
      it does not return the actual new value" */
   self->priv->value_valid = FALSE;
@@ -396,7 +421,11 @@ gtk_v4l_control_get (Gtkv4lControl *self)
     struct v4l2_control ctrl = { .id = self->id };
 
     if (v4l2_ioctl (self->fd, VIDIOC_G_CTRL, &ctrl) == -1) {
-      g_warning("get ctrl for id: %u failed", self->id);
+      gchar *error_msg;
+      error_msg = g_strdup_printf ("Error getting %s: %s",
+                                   self->name, strerror (errno));
+      g_signal_emit (self, signals[IO_ERROR_SIGNAL], 0, error_msg);
+      g_free (error_msg);
       return 0;
     }
     self->priv->value = ctrl.value;

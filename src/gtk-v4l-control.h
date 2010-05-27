@@ -58,7 +58,9 @@ struct _Gtkv4lControl {
 
 struct _Gtkv4lControlClass {
   GObjectClass parent;
-  /* class members */
+  /* signals */
+  /* Called when an io error happens */
+  void (*io_error) (Gtkv4lControl *control, const gchar *error_msg);
 };
 
 GType gtk_v4l_control_get_type (void);
