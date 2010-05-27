@@ -28,6 +28,11 @@
 #include "gtk-v4l-device.h"
 #include "gtk-v4l-control.h"
 
+#ifndef V4L2_CID_IRIS_ABSOLUTE
+#define V4L2_CID_IRIS_ABSOLUTE  (V4L2_CID_CAMERA_CLASS_BASE + 17)
+#define V4L2_CID_IRIS_RELATIVE  (V4L2_CID_CAMERA_CLASS_BASE + 18)
+#endif
+
 #define GTK_V4L_CONTROL_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GTK_V4L_TYPE_CONTROL, Gtkv4lControlPrivate))
 
 enum
@@ -485,4 +490,101 @@ gtk_v4l_control_is_advanced (Gtkv4lControl *self)
   }
   /* Everything else is considered advanced */
   return TRUE;
+}
+
+void
+gtk_v4l_control_fixup_flags (Gtkv4lControl *self)
+{
+  Gtkv4lControl *auto_control;
+
+  switch (self->id) {
+  case V4L2_CID_EXPOSURE:
+  case V4L2_CID_EXPOSURE_ABSOLUTE:
+    auto_control = gtk_v4l_device_get_control_by_id (self->device,
+                                                     V4L2_CID_EXPOSURE_AUTO);
+    if (!auto_control)
+      break;
+
+    switch (auto_control->type) {
+    case V4L2_CTRL_TYPE_BOOLEAN:
+      if (gtk_v4l_control_get (auto_control))
+        self->flags |= V4L2_CTRL_FLAG_GRABBED;
+    case V4L2_CTRL_TYPE_MENU:
+      switch (gtk_v4l_control_get (auto_control)) {
+        case V4L2_EXPOSURE_AUTO:
+        case V4L2_EXPOSURE_APERTURE_PRIORITY:
+          self->flags |= V4L2_CTRL_FLAG_GRABBED;
+          break;
+      }
+      break;
+    }
+    break;
+
+  case V4L2_CID_IRIS_RELATIVE:
+    self->flags |= V4L2_CTRL_FLAG_WRITE_ONLY;
+    /* Fall through */
+
+  case V4L2_CID_IRIS_ABSOLUTE:
+    auto_control = gtk_v4l_device_get_control_by_id (self->device,
+                                                     V4L2_CID_EXPOSURE_AUTO);
+    if (!auto_control || auto_control->type != V4L2_CTRL_TYPE_MENU)
+      break;
+
+    switch (gtk_v4l_control_get (auto_control)) {
+      case V4L2_EXPOSURE_AUTO:
+      case V4L2_EXPOSURE_SHUTTER_PRIORITY:
+        self->flags |= V4L2_CTRL_FLAG_GRABBED;
+        break;
+    }
+    break;
+
+  case V4L2_CID_FOCUS_RELATIVE:
+    self->flags |= V4L2_CTRL_FLAG_WRITE_ONLY;
+    /* Fall through */
+
+  case V4L2_CID_FOCUS_ABSOLUTE:
+    auto_control = gtk_v4l_device_get_control_by_id (self->device,
+                                                     V4L2_CID_FOCUS_AUTO);
+    if (!auto_control || auto_control->type != V4L2_CTRL_TYPE_BOOLEAN)
+      break;
+
+    if (gtk_v4l_control_get (auto_control))
+      self->flags |= V4L2_CTRL_FLAG_GRABBED;
+    break;
+
+  case V4L2_CID_HUE:
+    auto_control = gtk_v4l_device_get_control_by_id (self->device,
+                                                     V4L2_CID_HUE_AUTO);
+    if (!auto_control || auto_control->type != V4L2_CTRL_TYPE_BOOLEAN)
+      break;
+
+    if (gtk_v4l_control_get (auto_control))
+      self->flags |= V4L2_CTRL_FLAG_GRABBED;
+    break;
+
+  case V4L2_CID_WHITE_BALANCE_TEMPERATURE:
+  case V4L2_CID_BLUE_BALANCE:
+  case V4L2_CID_RED_BALANCE:
+    auto_control = gtk_v4l_device_get_control_by_id (self->device,
+                                                 V4L2_CID_AUTO_WHITE_BALANCE);
+    if (!auto_control || auto_control->type != V4L2_CTRL_TYPE_BOOLEAN)
+      break;
+
+    if (gtk_v4l_control_get (auto_control))
+      self->flags |= V4L2_CTRL_FLAG_GRABBED;
+    break;
+
+  case V4L2_CID_EXPOSURE_AUTO:
+  case V4L2_CID_FOCUS_AUTO:
+  case V4L2_CID_HUE_AUTO:
+  case V4L2_CID_AUTO_WHITE_BALANCE:
+    self->flags |= V4L2_CTRL_FLAG_UPDATE;
+    break;
+
+  case V4L2_CID_PAN_RELATIVE:
+  case V4L2_CID_TILT_RELATIVE:
+  case V4L2_CID_ZOOM_RELATIVE:
+    self->flags |= V4L2_CTRL_FLAG_WRITE_ONLY;
+    break;
+  }
 }

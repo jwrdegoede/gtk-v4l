@@ -238,6 +238,14 @@ gtk_v4l_device_init (Gtkv4lDevice *self)
   self->priv = priv = GTK_V4L_DEVICE_GET_PRIVATE(self);
 }
 
+static void
+gtk_v4l_device_fixup_control_flags (gpointer data, gpointer user_data)
+{
+  Gtkv4lControl *control = GTK_V4L_CONTROL (data);
+
+  gtk_v4l_control_fixup_flags (control);
+}
+
 GList *
 gtk_v4l_device_get_controls (Gtkv4lDevice *self)
 {
@@ -297,5 +305,22 @@ gtk_v4l_device_get_controls (Gtkv4lDevice *self)
     }
   }
 
+  g_list_foreach (self->priv->controls, gtk_v4l_device_fixup_control_flags, NULL);
+
   return self->priv->controls;
+}
+
+struct _Gtkv4lControl *
+gtk_v4l_device_get_control_by_id (Gtkv4lDevice *self, guint32 id)
+{
+  GList *elem;
+
+  for (elem = g_list_first (gtk_v4l_device_get_controls (self));
+       elem; elem = g_list_next (elem)) {
+    Gtkv4lControl *control = GTK_V4L_CONTROL (elem->data);
+    if (control->id == id)
+      return control;
+  }
+
+  return NULL;
 }

@@ -66,8 +66,16 @@ struct _Gtkv4lControlClass {
 GType gtk_v4l_control_get_type (void);
 void gtk_v4l_control_set (Gtkv4lControl *control, gint value);
 gint gtk_v4l_control_get (Gtkv4lControl *control);
+gboolean gtk_v4l_control_is_advanced (Gtkv4lControl *self);
+
+/* The below functions are meant for use by Gtkv4lDevice, there is
+   never a need to call these from other sources (so please don't). */
+
 /* Force re-reading of control properties and value from the driver / hw */
 void gtk_v4l_control_update (Gtkv4lControl *self);
-gboolean gtk_v4l_control_is_advanced (Gtkv4lControl *self);
+
+/* This adds certain fixed flags to controls based on their CID, as some
+   drivers (esp in older kernels) don't properly report these flags. */
+void gtk_v4l_control_fixup_flags (Gtkv4lControl *self);
 
 #endif
