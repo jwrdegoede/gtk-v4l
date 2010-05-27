@@ -53,6 +53,14 @@ void reset_cb (GtkButton *button, gpointer user_data)
   gtk_v4l_widget_reset_to_defaults (widget);
 }
 
+static void
+io_error_cb (Gtkv4lWidget *widget,
+             const gchar *error_msg,
+             gpointer user_data)
+{
+  show_error_dialog (error_msg);
+}
+
 void
 v4l2_combo_add_device(Gtkv4lDeviceList *devlist,
                       guint idx,
@@ -100,6 +108,8 @@ void v4l2_combo_change_device_cb (GtkWidget *combo, gpointer user_data)
   }
 
   controls = gtk_v4l_widget_new (g_list_nth_data (devlist->list, active));
+  g_signal_connect (controls, "io_error", G_CALLBACK (io_error_cb), NULL);
+  
   gtk_table_attach (GTK_TABLE (main_table), controls, 0, 2, 2, 3, GTK_FILL, GTK_FILL, 0, 5);
   gtk_widget_show_all (controls);
 }

@@ -50,7 +50,7 @@ enum
   IO_ERROR_SIGNAL,
   LAST_SIGNAL,
 };
-    
+
 struct _Gtkv4lControlPrivate {
   gint value;
   gboolean value_valid;

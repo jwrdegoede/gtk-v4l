@@ -46,7 +46,9 @@ struct _Gtkv4lWidget {
 
 struct _Gtkv4lWidgetClass {
   GtkTableClass parent;
-  /* class members */
+  /* signals */
+  /* Called when an io error happens */
+  void (*io_error) (Gtkv4lWidget *widget, const gchar *error_msg);
 };
 
 GType gtk_v4l_widget_get_type (void);
