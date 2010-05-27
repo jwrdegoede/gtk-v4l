@@ -24,7 +24,6 @@
 #define ICON_LOC "/usr/share/icons/gnome/24x24/devices/camera-web.png"
 
 GtkTable *main_table = NULL;
-GtkWidget *dev_combo = NULL;
 GtkWidget *controls = NULL;
 Gtkv4lDeviceList *devlist = NULL;
 
@@ -55,26 +54,34 @@ void reset_cb (GtkButton *button, gpointer user_data)
 }
 
 void
-v4l2_combo_add_device(Gtkv4lDevice *device, int idx)
+v4l2_combo_add_device(Gtkv4lDeviceList *devlist,
+                      guint idx,
+                      Gtkv4lDevice *device,
+                      gpointer user_data)
 {
   gint active;
+  GtkComboBox *combo = GTK_COMBO_BOX(user_data);
 
-  gtk_combo_box_insert_text (GTK_COMBO_BOX(dev_combo), idx, device->card);
-  active = gtk_combo_box_get_active (GTK_COMBO_BOX(dev_combo));
+  gtk_combo_box_insert_text (combo, idx, device->card);
+  active = gtk_combo_box_get_active (combo);
   if (active == -1)
-    gtk_combo_box_set_active (GTK_COMBO_BOX(dev_combo), idx);
+    gtk_combo_box_set_active (combo, idx);
 }
 
 void
-v4l2_combo_remove_device(Gtkv4lDevice *device, int idx)
+v4l2_combo_remove_device(Gtkv4lDeviceList *devlist,
+                         guint idx,
+                         Gtkv4lDevice *device,
+                         gpointer user_data)
 {
+  GtkComboBox *combo = GTK_COMBO_BOX (user_data);
   /* If this removes the current device
      v4l2_combo_change_device_cb() will get called and that will
      handle selecting a new device. */
-  gtk_combo_box_remove_text (GTK_COMBO_BOX(dev_combo), idx);
+  gtk_combo_box_remove_text (combo, idx);
 }
 
-void v4l2_combo_change_device_cb (GtkWidget *wid, gpointer user_data)
+void v4l2_combo_change_device_cb (GtkWidget *combo, gpointer user_data)
 {
   gint active;
 
@@ -83,12 +90,12 @@ void v4l2_combo_change_device_cb (GtkWidget *wid, gpointer user_data)
     controls = NULL;
   }
 
-  active = gtk_combo_box_get_active (GTK_COMBO_BOX(dev_combo));
+  active = gtk_combo_box_get_active (GTK_COMBO_BOX (combo));
   /* This happens when our current device gets unplugged */
   if (active == -1) {
     /* Just select the first one in the list */
     if (g_list_length (devlist->list) > 0)
-      gtk_combo_box_set_active (GTK_COMBO_BOX(dev_combo), 0);
+      gtk_combo_box_set_active (GTK_COMBO_BOX (combo), 0);
     return;
   }
 
@@ -106,7 +113,7 @@ int main(int argc, char *argv[])
   };
   GError *error = NULL;
   GdkPixbuf *icon_pixbuf = NULL;
-  GtkWidget *window, *content_area, *label, *align, *sep, *button;
+  GtkWidget *window, *content_area, *label, *align, *sep, *button, *dev_combo;
 
   GOptionContext* context = g_option_context_new("- Gtk V4l app");
   g_option_context_add_main_entries (context,entries, NULL);
@@ -156,8 +163,8 @@ int main(int argc, char *argv[])
   g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (close_cb), NULL);
 
   devlist = g_object_new (GTK_V4L_TYPE_DEVICE_LIST, NULL);
-  devlist->device_added = v4l2_combo_add_device;
-  devlist->device_removed = v4l2_combo_remove_device;
+  g_signal_connect (G_OBJECT (devlist), "device_added", G_CALLBACK (v4l2_combo_add_device), dev_combo);
+  g_signal_connect (G_OBJECT (devlist), "device_removed", G_CALLBACK (v4l2_combo_remove_device), dev_combo);
   gtk_v4l_device_list_coldplug (devlist);
 
   if (device_file)
@@ -165,7 +172,7 @@ int main(int argc, char *argv[])
     Gtkv4lDevice *device;
     device = gtk_v4l_device_list_get_dev_by_device_file (devlist, device_file);
     if (device)
-      gtk_combo_box_set_active (GTK_COMBO_BOX(dev_combo),
+      gtk_combo_box_set_active (GTK_COMBO_BOX (dev_combo),
                                 g_list_index (devlist->list, device));
     else
       show_error_dialog ("Specified video device not found");

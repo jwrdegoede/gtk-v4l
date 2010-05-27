@@ -39,12 +39,6 @@ typedef struct _Gtkv4lDeviceListPrivate Gtkv4lDeviceListPrivate;
 
 struct _Gtkv4lDeviceList {
   GObject parent;
-  /* FIXME convert these 2 into signals */
-  /* Called after a device is added to the list */
-  void (*device_added)(Gtkv4lDevice *device, int idx);
-  /* Called after a device is removed from the list, the idx argument
-     is the idx in the list the device used to have. */
-  void (*device_removed)(Gtkv4lDevice *device, int idx);
   /* instance members */
   GList *list;
   Gtkv4lDeviceListPrivate *priv;
@@ -52,7 +46,12 @@ struct _Gtkv4lDeviceList {
 
 struct _Gtkv4lDeviceListClass {
   GObjectClass parent;
-  /* class members */
+  /* signals */
+  /* Called after a device is added to the list */
+  void (*device_added) (Gtkv4lDeviceList *list, guint idx, Gtkv4lDevice *dev);
+  /* Called after a device is removed from the list, the idx argument
+     is the idx in the list the device used to have. */
+  void (*device_removed) (Gtkv4lDeviceList *list, guint idx, Gtkv4lDevice *dev);
 };
 
 GType gtk_v4l_device_list_get_type (void);

@@ -26,6 +26,13 @@
 
 #define GTK_V4L_DEVICE_LIST_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GTK_V4L_TYPE_DEVICE_LIST, Gtkv4lDeviceListPrivate))
 
+enum
+{
+  DEVICE_ADDED_SIGNAL,
+  DEVICE_REMOVED_SIGNAL,
+  LAST_SIGNAL,
+};
+    
 struct _Gtkv4lDeviceListPrivate {
   GUdevClient *udev;
 };
@@ -35,9 +42,10 @@ static void gtk_v4l_device_list_uevent_cb (GUdevClient            *client,
                                            GUdevDevice            *udevice,
                                            gpointer                user_data);
 
+static guint signals[LAST_SIGNAL] = { 0, };
+
 /* will create gtk_v4l_device_list_get_type and set gtk_v4l_device_list_parent_class */
 G_DEFINE_TYPE (Gtkv4lDeviceList, gtk_v4l_device_list, G_TYPE_OBJECT);
-    
 
 static void
 gtk_v4l_device_list_free_device (gpointer data, gpointer user_data)
@@ -64,6 +72,30 @@ gtk_v4l_device_list_class_init (Gtkv4lDeviceListClass *klass)
   g_type_class_add_private (klass, sizeof (Gtkv4lDeviceListPrivate));
 
   gobject_class->finalize = gtk_v4l_device_list_finalize;
+
+  signals[DEVICE_ADDED_SIGNAL] = g_signal_new ("device_added",
+                                         G_TYPE_FROM_CLASS (klass),
+                                         G_SIGNAL_RUN_LAST,
+                                         G_STRUCT_OFFSET (Gtkv4lDeviceListClass, device_added),
+                                         NULL,
+                                         NULL,
+                                         g_cclosure_marshal_VOID__UINT_POINTER,
+                                         G_TYPE_NONE,
+                                         2,
+                                         G_TYPE_UINT,
+                                         G_TYPE_POINTER);
+
+  signals[DEVICE_REMOVED_SIGNAL] = g_signal_new ("device_removed",
+                                         G_TYPE_FROM_CLASS (klass),
+                                         G_SIGNAL_RUN_LAST,
+                                         G_STRUCT_OFFSET (Gtkv4lDeviceListClass, device_removed),
+                                         NULL,
+                                         NULL,
+                                         g_cclosure_marshal_VOID__UINT_POINTER,
+                                         G_TYPE_NONE,
+                                         2,
+                                         G_TYPE_UINT,
+                                         G_TYPE_POINTER);
 }
 
 static void
@@ -107,8 +139,8 @@ gtk_v4l_device_list_add_dev (Gtkv4lDeviceList *self,
 
   self->list = g_list_append (self->list, device);
 
-  if (self->device_added)
-    self->device_added(device, g_list_index (self->list, device));
+  g_signal_emit (self, signals[DEVICE_ADDED_SIGNAL], 0,
+                 g_list_index (self->list, device), device);
 }
 
 static void
@@ -133,9 +165,7 @@ gtk_v4l_device_list_remove_dev (Gtkv4lDeviceList *self,
 
   self->list = g_list_remove (self->list, device);
 
-  if (self->device_removed)
-    self->device_removed (device, idx);
-
+  g_signal_emit (self, signals[DEVICE_REMOVED_SIGNAL], 0, idx, device);
   g_object_unref (device);
 }
 
