@@ -20,8 +20,7 @@
  *
  */
 
-#include <linux/videodev.h>
-#include <libv4l2.h>
+#include <linux/videodev2.h>
 #include "gtk-v4l-control.h"
 #include "gtk-v4l-widget.h"
 
@@ -297,6 +296,9 @@ gtk_v4l_widget_constructor (GType                  gtype,
     control_data->io_error_handler = handler_id;
 
     gtk_widget_set_size_request (control_widget, 250, -1);
+    if (control->flags &
+        (V4L2_CTRL_FLAG_GRABBED | V4L2_CTRL_FLAG_READ_ONLY | V4L2_CTRL_FLAG_INACTIVE))
+      gtk_widget_set_sensitive (control_widget, FALSE);
 
     label = gtk_label_new ((gchar *)control->name);
     gtk_misc_set_alignment (GTK_MISC(label),0.0,0.5);
