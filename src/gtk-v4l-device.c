@@ -149,10 +149,9 @@ static void
 gtk_v4l_device_free_control (gpointer data, gpointer user_data)
 {
   Gtkv4lControl *control = GTK_V4L_CONTROL (data);
-  
-  /* We are going to close the fd, so set it to -1 in case others still hold
-     a reference to the control. */
-  control->fd = -1;
+
+  /* Tell the control we are gone in case others still hold a reference */
+  control->device = NULL;
   g_object_unref (control);
 }
 
@@ -260,7 +259,7 @@ gtk_v4l_device_get_controls (Gtkv4lDevice *self)
       }
 
       control = g_object_new (GTK_V4L_TYPE_CONTROL,
-                              "fd", self->fd,
+                              "device", self,
                               "query_result", &query,
                               NULL);
       self->priv->controls = g_list_append (self->priv->controls, control);
@@ -276,7 +275,7 @@ gtk_v4l_device_get_controls (Gtkv4lDevice *self)
         continue;
 
       control = g_object_new (GTK_V4L_TYPE_CONTROL,
-                              "fd", self->fd,
+                              "device", self,
                               "query_result", &query,
                               NULL);
       self->priv->controls = g_list_append (self->priv->controls, control);
@@ -291,7 +290,7 @@ gtk_v4l_device_get_controls (Gtkv4lDevice *self)
         continue;
 
       control = g_object_new (GTK_V4L_TYPE_CONTROL,
-                              "fd", self->fd,
+                              "device", self,
                               "query_result", &query,
                               NULL);
       self->priv->controls = g_list_append (self->priv->controls, control);

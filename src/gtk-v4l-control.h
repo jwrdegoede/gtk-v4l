@@ -39,7 +39,7 @@ typedef struct _Gtkv4lControlPrivate Gtkv4lControlPrivate;
 struct _Gtkv4lControl {
   GObject parent;
   /* instance members */
-  int fd;
+  struct _Gtkv4lDevice *device;
   guint32 id;
   /* Control properties from v4l2_queryctrl, treat as read only */
   gint type;

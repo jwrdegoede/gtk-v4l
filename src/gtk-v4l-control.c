@@ -33,7 +33,7 @@
 enum
 {
   PROP_0,
-  PROP_FD,
+  PROP_DEVICE,
   PROP_ID,
   PROP_QUERY_RESULT,
   PROP_TYPE,
@@ -80,8 +80,8 @@ gtk_v4l_control_set_property (GObject      *object,
   Gtkv4lControl *self = GTK_V4L_CONTROL (object);
 
   switch (property_id) {
-  case PROP_FD:
-    self->fd = g_value_get_int(value);
+  case PROP_DEVICE:
+    self->device = GTK_V4L_DEVICE (g_value_get_object (value));
     break;
   case PROP_ID:
     self->id = g_value_get_uint(value);
@@ -115,8 +115,8 @@ gtk_v4l_control_get_property (GObject    *object,
   Gtkv4lControl *self = GTK_V4L_CONTROL (object);
 
   switch (property_id) {
-  case PROP_FD:
-    g_value_set_int (value, self->fd);
+  case PROP_DEVICE:
+    g_value_set_object (value, self->device);
     break;
   case PROP_ID:
     g_value_set_uint (value, self->id);
@@ -170,8 +170,8 @@ gtk_v4l_control_constructor (GType                  gtype,
 
   /* update the object state depending on constructor properties */
   self = GTK_V4L_CONTROL (obj);
-  if (self->fd == -1) {
-    g_error ("%s: No fd passed in to GtkV4lControl constructor", G_STRLOC);
+  if (!self->device) {
+    g_error ("%s: No device passed in to GtkV4lControl constructor", G_STRLOC);
     return obj;
   }
   if (self->id == 0 && self->priv->query_result == NULL) {
@@ -216,15 +216,13 @@ gtk_v4l_control_class_init (Gtkv4lControlClass *klass)
   gobject_class->set_property = gtk_v4l_control_set_property;
   gobject_class->get_property = gtk_v4l_control_get_property;
 
-  pspec = g_param_spec_int ("fd",
-                            "Gtkv4lControl construct prop",
-                            "Set the fd",
-                            G_MININT32,
-                            G_MAXINT32,
-                            -1,
-                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
+  pspec = g_param_spec_object ("device",
+                               "Gtkv4lControl construct prop",
+                               "Set the Gtkv4lDevice",
+                               GTK_V4L_TYPE_DEVICE,
+                               G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
   g_object_class_install_property (gobject_class,
-                                   PROP_FD,
+                                   PROP_DEVICE,
                                    pspec);
 
   pspec = g_param_spec_uint ("id",
@@ -339,7 +337,6 @@ gtk_v4l_control_init (Gtkv4lControl *self)
   Gtkv4lControlPrivate *priv;
 
   /* initialize the object */
-  self->fd = -1;
   self->priv = priv = GTK_V4L_CONTROL_GET_PRIVATE(self);
 }
 
@@ -364,7 +361,7 @@ gtk_v4l_control_handle_query_result (Gtkv4lControl *self,
 
     for (i = 0; i <= self->maximum; i++) {
       qm.index = i;
-      if (v4l2_ioctl (self->fd, VIDIOC_QUERYMENU, &qm) == 0) {
+      if (v4l2_ioctl (self->device->fd, VIDIOC_QUERYMENU, &qm) == 0) {
         self->menu_entries = g_list_append (self->menu_entries,
                                             g_strdup ((gchar *)qm.name));
       } else {
@@ -380,9 +377,14 @@ static void
 gtk_v4l_control_query (Gtkv4lControl *self)
 {
   struct v4l2_queryctrl query = { .id = self->id };
-  
-  if (v4l2_ioctl (self->fd, VIDIOC_QUERYCTRL, &query) == -1) {
-    g_warning("query ctrl for id: %u failed", self->id);
+
+  if (!self->device) {
+    g_error ("%s: control has no associated device", G_STRLOC);
+    return;
+  }  
+
+  if (v4l2_ioctl (self->device->fd, VIDIOC_QUERYCTRL, &query) == -1) {
+    g_warning ("query ctrl for id: %u failed", self->id);
     return;
   }
 
@@ -397,7 +399,12 @@ gtk_v4l_control_set (Gtkv4lControl *self, gint value)
   if (self->priv->value_valid && self->priv->value == value)
     return;
 
-  if (v4l2_ioctl (self->fd, VIDIOC_S_CTRL, &ctrl) == -1) {
+  if (!self->device) {
+    g_error ("%s: control has no associated device", G_STRLOC);
+    return;
+  }  
+
+  if (v4l2_ioctl (self->device->fd, VIDIOC_S_CTRL, &ctrl) == -1) {
     gchar *error_msg;
     error_msg = g_strdup_printf ("Error setting %s: %s",
                                  self->name, strerror (errno));
@@ -420,7 +427,12 @@ gtk_v4l_control_get (Gtkv4lControl *self)
   if (!self->priv->value_valid) {
     struct v4l2_control ctrl = { .id = self->id };
 
-    if (v4l2_ioctl (self->fd, VIDIOC_G_CTRL, &ctrl) == -1) {
+    if (!self->device) {
+      g_error ("%s: control has no associated device", G_STRLOC);
+      return 0;
+    }  
+
+    if (v4l2_ioctl (self->device->fd, VIDIOC_G_CTRL, &ctrl) == -1) {
       gchar *error_msg;
       error_msg = g_strdup_printf ("Error getting %s: %s",
                                    self->name, strerror (errno));
