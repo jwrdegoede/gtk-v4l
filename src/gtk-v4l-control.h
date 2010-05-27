@@ -61,6 +61,8 @@ struct _Gtkv4lControlClass {
   /* signals */
   /* Called when an io error happens */
   void (*io_error) (Gtkv4lControl *control, const gchar *error_msg);
+  /* Called when a control with the V4L2_CTRL_FLAG_UPDATE flag set gets set */
+  void (*controls_need_update) (Gtkv4lControl *control);
 };
 
 GType gtk_v4l_control_get_type (void);

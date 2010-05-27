@@ -53,6 +53,7 @@ enum
 enum
 {
   IO_ERROR_SIGNAL,
+  CONTROLS_NEED_UPDATE_SIGNAL,
   LAST_SIGNAL,
 };
 
@@ -325,15 +326,25 @@ gtk_v4l_control_class_init (Gtkv4lControlClass *klass)
                                    pspec);
 
   signals[IO_ERROR_SIGNAL] = g_signal_new ("io_error",
-                                         G_TYPE_FROM_CLASS (klass),
-                                         G_SIGNAL_RUN_LAST,
-                                         G_STRUCT_OFFSET (Gtkv4lControlClass, io_error),
-                                         NULL,
-                                         NULL,
-                                         g_cclosure_marshal_VOID__STRING,
-                                         G_TYPE_NONE,
-                                         1,
-                                         G_TYPE_STRING);
+                                           G_TYPE_FROM_CLASS (klass),
+                                           G_SIGNAL_RUN_LAST,
+                                           G_STRUCT_OFFSET (Gtkv4lControlClass, io_error),
+                                           NULL,
+                                           NULL,
+                                           g_cclosure_marshal_VOID__STRING,
+                                           G_TYPE_NONE,
+                                           1,
+                                           G_TYPE_STRING);
+
+  signals[CONTROLS_NEED_UPDATE_SIGNAL] = g_signal_new ("controls_need_update",
+                                           G_TYPE_FROM_CLASS (klass),
+                                           G_SIGNAL_RUN_LAST,
+                                           G_STRUCT_OFFSET (Gtkv4lControlClass, controls_need_update),
+                                           NULL,
+                                           NULL,
+                                           g_cclosure_marshal_VOID__VOID,
+                                           G_TYPE_NONE,
+                                           0);
 }
 
 static void
@@ -421,6 +432,9 @@ gtk_v4l_control_set (Gtkv4lControl *self, gint value)
   /* From the v4l2 api: "VIDIOC_S_CTRL is a write-only ioctl,
      it does not return the actual new value" */
   self->priv->value_valid = FALSE;
+
+  if (self->flags & V4L2_CTRL_FLAG_UPDATE)
+    g_signal_emit (self, signals[CONTROLS_NEED_UPDATE_SIGNAL], 0);
 }
 
 gint
