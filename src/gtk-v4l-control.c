@@ -418,7 +418,13 @@ gtk_v4l_control_set (Gtkv4lControl *self, gint value)
   if (!self->device) {
     g_error ("%s: control has no associated device", G_STRLOC);
     return;
-  }  
+  }
+
+  if (self->flags & (V4L2_CTRL_FLAG_GRABBED | V4L2_CTRL_FLAG_READ_ONLY)) {
+    g_warning ("%s: cannot set read only or grabbed control: %s",
+               G_STRLOC, self->name);
+    return;
+  }
 
   if (v4l2_ioctl (self->device->fd, VIDIOC_S_CTRL, &ctrl) == -1) {
     gchar *error_msg;
