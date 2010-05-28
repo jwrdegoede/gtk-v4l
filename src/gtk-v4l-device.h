@@ -56,5 +56,6 @@ struct _Gtkv4lDeviceClass {
 GType gtk_v4l_device_get_type (void);
 GList *gtk_v4l_device_get_controls (Gtkv4lDevice *self);
 struct _Gtkv4lControl *gtk_v4l_device_get_control_by_id (Gtkv4lDevice *self, guint32 id);
+void gtk_v4l_device_update_controls (Gtkv4lDevice *self);
 
 #endif

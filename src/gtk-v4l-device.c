@@ -324,3 +324,20 @@ gtk_v4l_device_get_control_by_id (Gtkv4lDevice *self, guint32 id)
 
   return NULL;
 }
+
+static void
+gtk_v4l_device_update_control (gpointer data, gpointer user_data)
+{
+  Gtkv4lControl *control = GTK_V4L_CONTROL (data);
+
+  gtk_v4l_control_update (control);
+}
+
+void gtk_v4l_device_update_controls (Gtkv4lDevice *self)
+{
+  /* Note the 2 separate foreach calls are deliberate we first want to update
+     all controls and then fixup their flags (as some flags get set based
+     upon the value of other controls) */
+  g_list_foreach (self->priv->controls, gtk_v4l_device_update_control, NULL);
+  g_list_foreach (self->priv->controls, gtk_v4l_device_fixup_control_flags, NULL);
+}

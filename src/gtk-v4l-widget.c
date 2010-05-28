@@ -48,6 +48,7 @@ struct _Gtkv4lWidgetControlData {
   GtkWidget *widget;
   gulong widget_handler;
   gulong io_error_handler;
+  gulong controls_need_update_handler;
 };
 
 static guint signals[LAST_SIGNAL] = { 0, };
@@ -93,20 +94,58 @@ gtk_v4l_widget_get_property (GObject    *object,
   }
 }
 
+static void
+gtk_v4l_widget_set_widget_value (Gtkv4lControl *control, gint value)
+{
+  Gtkv4lWidgetControlData *control_data = control->user_data;
+
+  switch (control->type) {
+  case V4L2_CTRL_TYPE_INTEGER:
+    gtk_range_set_value (GTK_RANGE (control_data->widget), value);
+    break;
+  case V4L2_CTRL_TYPE_BOOLEAN:
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (control_data->widget),
+                                  value);
+    break;
+  case V4L2_CTRL_TYPE_MENU:
+    gtk_combo_box_set_active (GTK_COMBO_BOX (control_data->widget), value);
+    break;
+  case V4L2_CTRL_TYPE_BUTTON:
+    /* do nothing */
+    break;
+  }
+}
+
+static void
+gtk_v4l_widget_update_control (gpointer data, gpointer user_data)
+{
+  Gtkv4lControl *control = GTK_V4L_CONTROL (data);
+  Gtkv4lWidgetControlData *control_data = control->user_data;
+  gint value = gtk_v4l_control_get(control);
+
+  if (!control_data)
+    return; /* This control has no associated widget */
+
+  g_signal_handler_block (control_data->widget, control_data->widget_handler);
+  gtk_v4l_widget_set_widget_value (control, value);
+  g_signal_handler_unblock (control_data->widget, control_data->widget_handler);
+
+  if (control->flags &
+      (V4L2_CTRL_FLAG_GRABBED | V4L2_CTRL_FLAG_READ_ONLY | V4L2_CTRL_FLAG_INACTIVE))
+    gtk_widget_set_sensitive (control_data->widget, FALSE);
+  else
+    gtk_widget_set_sensitive (control_data->widget, TRUE);
+}
+
 void int_control_changed_cb (GtkWidget *range, gpointer user_data)
 {
   Gtkv4lControl *control = GTK_V4L_CONTROL (user_data);
-  Gtkv4lWidgetControlData *control_data = control->user_data;
   gdouble value;
 
   value = gtk_range_get_value (GTK_RANGE (range));
   gtk_v4l_control_set (control, value);
-
   /* Set the widget to what the hardware reports as the actual result */
-  value = gtk_v4l_control_get (control);
-  g_signal_handler_block (range, control_data->widget_handler);
-  gtk_range_set_value (GTK_RANGE (range), value);
-  g_signal_handler_unblock (range, control_data->widget_handler);
+  gtk_v4l_widget_update_control (control, NULL);
 }
 
 gchar *
@@ -131,8 +170,6 @@ gtk_v4l_widget_create_int_widget (Gtkv4lControl *control)
   gtk_scale_set_value_pos (GTK_SCALE(HScale), GTK_POS_RIGHT);
   gtk_scale_set_digits (GTK_SCALE(HScale), 0);
   gtk_range_set_increments (GTK_RANGE(HScale), step, step);
-  gtk_range_set_value (GTK_RANGE(HScale),
-                       (gdouble) gtk_v4l_control_get(control));
   control_data->widget_handler =
     g_signal_connect (G_OBJECT (HScale), "value-changed",
                       G_CALLBACK (int_control_changed_cb), control);
@@ -145,17 +182,12 @@ gtk_v4l_widget_create_int_widget (Gtkv4lControl *control)
 void bool_control_changed_cb (GtkWidget *button, gpointer user_data)
 {
   Gtkv4lControl *control = GTK_V4L_CONTROL (user_data);
-  Gtkv4lWidgetControlData *control_data = control->user_data;
   gboolean state;
 
   state = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (button));
   gtk_v4l_control_set (control, state);
-
   /* Set the widget to what the hardware reports as the actual result */
-  state = gtk_v4l_control_get (control);
-  g_signal_handler_block (button, control_data->widget_handler);
-  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), state);
-  g_signal_handler_unblock (button, control_data->widget_handler);
+  gtk_v4l_widget_update_control (control, NULL);
 }
 
 static GtkWidget *
@@ -163,11 +195,8 @@ gtk_v4l_widget_create_bool_widget (Gtkv4lControl *control)
 {
   Gtkv4lWidgetControlData *control_data = control->user_data;
   GtkWidget *check;
-  gboolean state;
 
-  state = (gboolean) gtk_v4l_control_get (control);
   check = gtk_check_button_new();
-  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(check), state);
   control_data->widget_handler =
     g_signal_connect (G_OBJECT(check), "clicked",
                       G_CALLBACK (bool_control_changed_cb), control);
@@ -178,17 +207,12 @@ gtk_v4l_widget_create_bool_widget (Gtkv4lControl *control)
 void menu_control_changed_cb (GtkWidget *combo, gpointer user_data)
 {
   Gtkv4lControl *control = GTK_V4L_CONTROL (user_data);
-  Gtkv4lWidgetControlData *control_data = control->user_data;
   gint value;
 
   value = gtk_combo_box_get_active(GTK_COMBO_BOX (combo));
   gtk_v4l_control_set (control, value);
-
   /* Set the widget to what the hardware reports as the actual result */
-  value = gtk_v4l_control_get (control);
-  g_signal_handler_block (combo, control_data->widget_handler);
-  gtk_combo_box_set_active (GTK_COMBO_BOX (combo), value);
-  g_signal_handler_unblock (combo, control_data->widget_handler);
+  gtk_v4l_widget_update_control (control, NULL);
 }
 
 static GtkWidget *
@@ -204,8 +228,6 @@ gtk_v4l_widget_create_menu_widget (Gtkv4lControl *control)
        elem; elem = g_list_next (elem))
     gtk_combo_box_append_text (GTK_COMBO_BOX(combo), (gchar *) elem->data);
 
-  gtk_combo_box_set_active (GTK_COMBO_BOX(combo),
-                            gtk_v4l_control_get(control));
   control_data->widget_handler =
     g_signal_connect (G_OBJECT(combo), "changed",
                       G_CALLBACK(menu_control_changed_cb), control);
@@ -242,6 +264,17 @@ gtk_v4l_widget_io_error_cb (Gtkv4lControl *control,
   Gtkv4lWidget *self = GTK_V4L_WIDGET (user_data);
 
   g_signal_emit (self, signals[IO_ERROR_SIGNAL], 0, error_msg);
+}
+
+static void
+gtk_v4l_widget_controls_need_update_cb (Gtkv4lControl *control,
+                                        gpointer user_data)
+{
+  Gtkv4lWidget *self = GTK_V4L_WIDGET (user_data);
+
+  gtk_v4l_device_update_controls (self->device);
+  g_list_foreach (gtk_v4l_device_get_controls (self->device),
+                  gtk_v4l_widget_update_control, NULL);
 }
 
 static GObject *
@@ -294,17 +327,20 @@ gtk_v4l_widget_constructor (GType                  gtype,
       continue;
     }
 
+    control_data->widget = control_widget;
     handler_id = g_signal_connect (control,
                                    "io_error",
                                    G_CALLBACK (gtk_v4l_widget_io_error_cb),
                                    self);
-    control_data->widget = control_widget;
     control_data->io_error_handler = handler_id;
+    handler_id = g_signal_connect (control,
+                                   "controls_need_update",
+                                   G_CALLBACK (gtk_v4l_widget_controls_need_update_cb),
+                                   self);
+    control_data->controls_need_update_handler = handler_id;
 
     gtk_widget_set_size_request (control_widget, 250, -1);
-    if (control->flags &
-        (V4L2_CTRL_FLAG_GRABBED | V4L2_CTRL_FLAG_READ_ONLY | V4L2_CTRL_FLAG_INACTIVE))
-      gtk_widget_set_sensitive (control_widget, FALSE);
+    gtk_v4l_widget_update_control (control, NULL);
 
     label = gtk_label_new ((gchar *)control->name);
     gtk_misc_set_alignment (GTK_MISC(label),0.0,0.5);
@@ -356,6 +392,7 @@ gtk_v4l_widget_finalize (GObject *object)
       continue;
 
     g_signal_handler_disconnect (control, control_data->io_error_handler);
+    g_signal_handler_disconnect (control, control_data->controls_need_update_handler);
     g_free (control_data);
     control->user_data = NULL;
   }
@@ -419,24 +456,7 @@ void gtk_v4l_widget_reset_to_defaults (Gtkv4lWidget *self)
   for (elem = g_list_first (gtk_v4l_device_get_controls (self->device));
        elem; elem = g_list_next (elem)) {
     Gtkv4lControl *control = GTK_V4L_CONTROL (elem->data);
-    Gtkv4lWidgetControlData *control_data = control->user_data;
 
-    switch (control->type) {
-    case V4L2_CTRL_TYPE_INTEGER:
-      gtk_range_set_value (GTK_RANGE (control_data->widget),
-                           control->default_value);
-      break;
-    case V4L2_CTRL_TYPE_BOOLEAN:
-      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (control_data->widget),
-                                    control->default_value);
-      break;
-    case V4L2_CTRL_TYPE_MENU:
-      gtk_combo_box_set_active (GTK_COMBO_BOX (control_data->widget),
-                                control->default_value);
-      break;
-    case V4L2_CTRL_TYPE_BUTTON:
-      /* do nothing */
-      break;
-    }
+    gtk_v4l_widget_set_widget_value (control, control->default_value);
   }
 }
