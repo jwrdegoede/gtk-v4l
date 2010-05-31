@@ -371,6 +371,11 @@ gtk_v4l_control_handle_query_result (Gtkv4lControl *self,
   self->default_value = query->default_value;
   self->flags         = query->flags;
 
+  if((self->type != V4L2_CTRL_TYPE_BUTTON) &&
+     (self->type != V4L2_CTRL_TYPE_INTEGER64) &&
+     (!(self->step)))
+        self->step = 1;
+
   if (self->type == V4L2_CTRL_TYPE_MENU && !self->menu_entries) {
     int i;
     struct v4l2_querymenu qm = { .id = self->id };
