@@ -101,7 +101,8 @@ gtk_v4l_widget_set_widget_value (Gtkv4lControl *control, gint value)
 
   switch (control->type) {
   case V4L2_CTRL_TYPE_INTEGER:
-    gtk_range_set_value (GTK_RANGE (control_data->widget), value);
+    if (!(control->flags & V4L2_CTRL_FLAG_WRITE_ONLY))
+      gtk_range_set_value (GTK_RANGE (control_data->widget), value);
     break;
   case V4L2_CTRL_TYPE_BOOLEAN:
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (control_data->widget),
@@ -121,14 +122,16 @@ gtk_v4l_widget_update_control (gpointer data, gpointer user_data)
 {
   Gtkv4lControl *control = GTK_V4L_CONTROL (data);
   Gtkv4lWidgetControlData *control_data = control->user_data;
-  gint value = gtk_v4l_control_get(control);
 
   if (!control_data)
     return; /* This control has no associated widget */
 
-  g_signal_handler_block (control_data->widget, control_data->widget_handler);
-  gtk_v4l_widget_set_widget_value (control, value);
-  g_signal_handler_unblock (control_data->widget, control_data->widget_handler);
+  if (!(control->flags & V4L2_CTRL_FLAG_WRITE_ONLY)) {
+    gint value = gtk_v4l_control_get(control);
+    g_signal_handler_block (control_data->widget, control_data->widget_handler);
+    gtk_v4l_widget_set_widget_value (control, value);
+    g_signal_handler_unblock (control_data->widget, control_data->widget_handler);
+  }
 
   if (control->flags &
       (V4L2_CTRL_FLAG_GRABBED | V4L2_CTRL_FLAG_READ_ONLY | V4L2_CTRL_FLAG_INACTIVE))
@@ -177,6 +180,60 @@ gtk_v4l_widget_create_int_widget (Gtkv4lControl *control)
                     G_CALLBACK (int_control_format_cb), control);
 
   return HScale;
+}
+
+static void 
+gtk_v4l_widget_relative_int_dec_clicked (GtkWidget *button, gpointer user_data)
+{
+  Gtkv4lControl *control = GTK_V4L_CONTROL (user_data);
+  gint step, range = control->maximum - control->minimum;
+
+  /* Allow the user to walk over the entire range in 50 clicks */
+  step = range / 50;
+  if (step < control->step)
+    step = control->step;
+
+  /* Assume range / 2 is the no change value */
+  gtk_v4l_control_set (control, control->minimum + range / 2 - step);
+}
+
+static void 
+gtk_v4l_widget_relative_int_inc_clicked (GtkWidget *button, gpointer user_data)
+{
+  Gtkv4lControl *control = GTK_V4L_CONTROL (user_data);
+  gint step, range = control->maximum - control->minimum;
+
+  /* Allow the user to walk over the entire range in 50 clicks */
+  step = range / 50;
+  if (step < control->step)
+    step = control->step;
+
+  /* Assume range / 2 is the no change value */
+  gtk_v4l_control_set (control, control->minimum + range / 2 + step);
+}
+
+static GtkWidget *
+gtk_v4l_widget_create_relative_int_widget (Gtkv4lControl *control)
+{  
+  GtkWidget *table, *button;
+
+  table = gtk_table_new(1, 2, FALSE);
+
+  button = gtk_button_new_with_label("<");
+  gtk_widget_set_size_request (button, 125, -1);
+  g_signal_connect(G_OBJECT (button), "clicked",
+                     G_CALLBACK (gtk_v4l_widget_relative_int_dec_clicked),
+                     control);
+  gtk_table_attach (GTK_TABLE (table), button, 0, 1, 0, 1, GTK_FILL, GTK_FILL, 0, 0);
+
+  button = gtk_button_new_with_label(">");
+  gtk_widget_set_size_request (button, 125, -1);
+  g_signal_connect(G_OBJECT (button), "clicked",
+                     G_CALLBACK (gtk_v4l_widget_relative_int_inc_clicked),
+                     control);
+  gtk_table_attach (GTK_TABLE (table), button, 1, 2, 0, 1, GTK_FILL, GTK_FILL, 0, 0);
+
+  return table;
 }
 
 void bool_control_changed_cb (GtkWidget *button, gpointer user_data)
@@ -248,7 +305,7 @@ gtk_v4l_widget_create_button_widget (Gtkv4lControl *control)
   GtkWidget *button;
   Gtkv4lWidgetControlData *control_data = control->user_data;
 
-  button = gtk_button_new_with_label("Reset");
+  button = gtk_button_new_with_label(control->name);
   control_data->widget_handler =
     g_signal_connect(G_OBJECT(button), "clicked",
                      G_CALLBACK(button_control_changed_cb), control);
@@ -308,7 +365,10 @@ gtk_v4l_widget_constructor (GType                  gtype,
 
     switch(control->type) {
     case V4L2_CTRL_TYPE_INTEGER:
-      control_widget = gtk_v4l_widget_create_int_widget (control);
+      if (control->flags & V4L2_CTRL_FLAG_WRITE_ONLY)
+        control_widget = gtk_v4l_widget_create_relative_int_widget (control);
+      else
+        control_widget = gtk_v4l_widget_create_int_widget (control);
       break;
     case V4L2_CTRL_TYPE_BOOLEAN:
       control_widget = gtk_v4l_widget_create_bool_widget (control);
