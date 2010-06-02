@@ -26,6 +26,8 @@
 GtkTable *main_table = NULL;
 GtkWidget *controls = NULL;
 Gtkv4lDeviceList *devlist = NULL;
+GtkWidget *default_button;
+
 
 static void show_error_dialog (const gchar *error)
 {
@@ -73,7 +75,11 @@ v4l2_combo_add_device(Gtkv4lDeviceList *devlist,
   gtk_combo_box_insert_text (combo, idx, device->card);
   active = gtk_combo_box_get_active (combo);
   if (active == -1)
+  {
     gtk_combo_box_set_active (combo, idx);
+    if ( gtk_widget_get_sensitive (GTK_WIDGET(default_button)) == FALSE)
+      gtk_widget_set_sensitive (default_button, TRUE);
+  }
 }
 
 void
@@ -87,6 +93,8 @@ v4l2_combo_remove_device(Gtkv4lDeviceList *devlist,
      v4l2_combo_change_device_cb() will get called and that will
      handle selecting a new device. */
   gtk_combo_box_remove_text (combo, idx);
+  if ((gtk_tree_model_iter_n_children( gtk_combo_box_get_model (combo),NULL)) == 0)
+    gtk_widget_set_sensitive (default_button, FALSE);
 }
 
 void v4l2_combo_change_device_cb (GtkWidget *combo, gpointer user_data)
@@ -102,7 +110,7 @@ void v4l2_combo_change_device_cb (GtkWidget *combo, gpointer user_data)
   /* This happens when our current device gets unplugged */
   if (active == -1) {
     /* Just select the first one in the list */
-    if (g_list_length (devlist->list) > 0)
+    if (g_list_length (devlist->list) > 0) 
       gtk_combo_box_set_active (GTK_COMBO_BOX (combo), 0);
     return;
   }
@@ -123,7 +131,7 @@ int main(int argc, char *argv[])
   };
   GError *error = NULL;
   GdkPixbuf *icon_pixbuf = NULL;
-  GtkWidget *window, *content_area, *label, *align, *sep, *button, *dev_combo;
+  GtkWidget *window, *content_area, *label, *align, *sep,*button, *dev_combo;
 
   GOptionContext* context = g_option_context_new("- Gtk V4l app");
   g_option_context_add_main_entries (context,entries, NULL);
@@ -166,8 +174,8 @@ int main(int argc, char *argv[])
   gtk_container_add (GTK_CONTAINER (content_area), GTK_WIDGET (main_table));
 
 
-  button = gtk_dialog_add_button (GTK_DIALOG (window), "_Defaults", GTK_RESPONSE_APPLY);
-  g_signal_connect(G_OBJECT (button), "clicked", G_CALLBACK (reset_cb), &controls);
+  default_button = gtk_dialog_add_button (GTK_DIALOG (window), "_Defaults", GTK_RESPONSE_APPLY);
+  g_signal_connect(G_OBJECT (default_button), "clicked", G_CALLBACK (reset_cb), &controls);
 
   button = gtk_dialog_add_button (GTK_DIALOG (window), GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE);
   g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (close_cb), NULL);
@@ -187,8 +195,10 @@ int main(int argc, char *argv[])
     else
       show_error_dialog ("Specified video device not found");
   } else if (g_list_length (devlist->list) == 0)
+  {
     show_error_dialog ("No video devices found");
-
+    gtk_widget_set_sensitive (default_button, FALSE);    
+  }
   gtk_widget_show_all (window);
 
   gtk_main();
