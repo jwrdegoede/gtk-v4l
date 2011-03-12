@@ -517,7 +517,8 @@ void gtk_v4l_widget_reset_to_defaults (Gtkv4lWidget *self)
        elem; elem = g_list_next (elem)) {
     Gtkv4lControl *control = GTK_V4L_CONTROL (elem->data);
 
-    if (control->flags & (V4L2_CTRL_FLAG_GRABBED | V4L2_CTRL_FLAG_READ_ONLY))
+    if (control->flags & (V4L2_CTRL_FLAG_GRABBED | V4L2_CTRL_FLAG_READ_ONLY |
+                          V4L2_CTRL_FLAG_INACTIVE))
       continue;
 
     gtk_v4l_widget_set_widget_value (control, control->default_value);
