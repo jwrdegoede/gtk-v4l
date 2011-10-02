@@ -246,10 +246,24 @@ gtk_v4l_device_fixup_control_flags (gpointer data, gpointer user_data)
   gtk_v4l_control_fixup_flags (control);
 }
 
+static void
+gtk_v4l_device_new_control (Gtkv4lDevice *self, struct v4l2_queryctrl *query)
+{
+  Gtkv4lControl *control;
+
+  if (query->flags & V4L2_CTRL_FLAG_DISABLED)
+    return;
+
+  control = g_object_new (GTK_V4L_TYPE_CONTROL,
+                          "device", self,
+                          "query_result", query,
+                          NULL);
+  self->priv->controls = g_list_append (self->priv->controls, control);
+}
+
 GList *
 gtk_v4l_device_get_controls (Gtkv4lDevice *self)
 {
-  Gtkv4lControl *control;
   struct v4l2_queryctrl query;
   int i;
   
@@ -261,16 +275,7 @@ gtk_v4l_device_get_controls (Gtkv4lDevice *self)
   query.id = V4L2_CTRL_FLAG_NEXT_CTRL;
   if (v4l2_ioctl (self->fd, VIDIOC_QUERYCTRL, &query) != -1) {
     do {
-      if (query.flags & V4L2_CTRL_FLAG_DISABLED) {
-        query.id |= V4L2_CTRL_FLAG_NEXT_CTRL;
-        continue;
-      }
-
-      control = g_object_new (GTK_V4L_TYPE_CONTROL,
-                              "device", self,
-                              "query_result", &query,
-                              NULL);
-      self->priv->controls = g_list_append (self->priv->controls, control);
+      gtk_v4l_device_new_control (self, &query);
       query.id |= V4L2_CTRL_FLAG_NEXT_CTRL;
     } while(v4l2_ioctl (self->fd, VIDIOC_QUERYCTRL, &query) != -1);
   } else {
@@ -279,14 +284,7 @@ gtk_v4l_device_get_controls (Gtkv4lDevice *self)
       if (v4l2_ioctl (self->fd, VIDIOC_QUERYCTRL, &query) == -1)
         continue;
 
-      if (query.flags & V4L2_CTRL_FLAG_DISABLED)
-        continue;
-
-      control = g_object_new (GTK_V4L_TYPE_CONTROL,
-                              "device", self,
-                              "query_result", &query,
-                              NULL);
-      self->priv->controls = g_list_append (self->priv->controls, control);
+      gtk_v4l_device_new_control (self, &query);
     }
 
     for (i = V4L2_CID_PRIVATE_BASE; ; i++) {
@@ -294,14 +292,7 @@ gtk_v4l_device_get_controls (Gtkv4lDevice *self)
       if (v4l2_ioctl (self->fd, VIDIOC_QUERYCTRL, &query) == -1)
         break;
 
-      if (query.flags & V4L2_CTRL_FLAG_DISABLED)
-        continue;
-
-      control = g_object_new (GTK_V4L_TYPE_CONTROL,
-                              "device", self,
-                              "query_result", &query,
-                              NULL);
-      self->priv->controls = g_list_append (self->priv->controls, control);
+      gtk_v4l_device_new_control (self, &query);
     }
   }
 
