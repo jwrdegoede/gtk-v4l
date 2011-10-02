@@ -382,6 +382,7 @@ gtk_v4l_widget_constructor (GType                  gtype,
     default:
       g_warning("Skipping control %s with unknown type %d",
                 control->name, control->type);
+    case V4L2_CTRL_TYPE_CTRL_CLASS:
       g_free (control_data);
       control->user_data = NULL;
       continue;
