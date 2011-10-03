@@ -53,6 +53,7 @@ enum
 enum
 {
   IO_ERROR_SIGNAL,
+  CONTROL_NEEDS_UPDATE_SIGNAL,
   CONTROLS_NEED_UPDATE_SIGNAL,
   LAST_SIGNAL,
 };
@@ -336,6 +337,16 @@ gtk_v4l_control_class_init (Gtkv4lControlClass *klass)
                                            1,
                                            G_TYPE_STRING);
 
+  signals[CONTROL_NEEDS_UPDATE_SIGNAL] = g_signal_new ("control_needs_update",
+                                           G_TYPE_FROM_CLASS (klass),
+                                           G_SIGNAL_RUN_LAST,
+                                           G_STRUCT_OFFSET (Gtkv4lControlClass, control_needs_update),
+                                           NULL,
+                                           NULL,
+                                           g_cclosure_marshal_VOID__VOID,
+                                           G_TYPE_NONE,
+                                           0);
+
   signals[CONTROLS_NEED_UPDATE_SIGNAL] = g_signal_new ("controls_need_update",
                                            G_TYPE_FROM_CLASS (klass),
                                            G_SIGNAL_RUN_LAST,
@@ -444,7 +455,8 @@ gtk_v4l_control_set (Gtkv4lControl *self, gint value)
      it does not return the actual new value" */
   self->priv->value_valid = FALSE;
 
-  if (self->flags & V4L2_CTRL_FLAG_UPDATE)
+  if ((self->flags & V4L2_CTRL_FLAG_UPDATE) &&
+      !gtk_v4l_device_supports_ctrl_events (self->device))
     g_signal_emit (self, signals[CONTROLS_NEED_UPDATE_SIGNAL], 0);
 }
 
@@ -482,6 +494,15 @@ gtk_v4l_control_update (Gtkv4lControl *self)
 {
   gtk_v4l_control_query (self);
   self->priv->value_valid = FALSE;  
+}
+
+void
+gtk_v4l_control_ctrl_event (Gtkv4lControl *self, gint flags, gint value)
+{
+  self->flags = flags;
+  self->priv->value = value;
+  self->priv->value_valid = TRUE;
+  g_signal_emit (self, signals[CONTROL_NEEDS_UPDATE_SIGNAL], 0);
 }
 
 gboolean

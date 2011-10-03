@@ -48,6 +48,7 @@ struct _Gtkv4lWidgetControlData {
   GtkWidget *widget;
   gulong widget_handler;
   gulong io_error_handler;
+  gulong control_needs_update_handler;
   gulong controls_need_update_handler;
 };
 
@@ -324,6 +325,13 @@ gtk_v4l_widget_io_error_cb (Gtkv4lControl *control,
 }
 
 static void
+gtk_v4l_widget_control_needs_update_cb (Gtkv4lControl *control,
+                                        gpointer user_data)
+{
+  gtk_v4l_widget_update_control (control, NULL);
+}
+
+static void
 gtk_v4l_widget_controls_need_update_cb (Gtkv4lControl *control,
                                         gpointer user_data)
 {
@@ -395,6 +403,11 @@ gtk_v4l_widget_constructor (GType                  gtype,
                                    self);
     control_data->io_error_handler = handler_id;
     handler_id = g_signal_connect (control,
+                                   "control_needs_update",
+                                   G_CALLBACK (gtk_v4l_widget_control_needs_update_cb),
+                                   self);
+    control_data->control_needs_update_handler = handler_id;
+    handler_id = g_signal_connect (control,
                                    "controls_need_update",
                                    G_CALLBACK (gtk_v4l_widget_controls_need_update_cb),
                                    self);
@@ -453,6 +466,7 @@ gtk_v4l_widget_finalize (GObject *object)
       continue;
 
     g_signal_handler_disconnect (control, control_data->io_error_handler);
+    g_signal_handler_disconnect (control, control_data->control_needs_update_handler);
     g_signal_handler_disconnect (control, control_data->controls_need_update_handler);
     g_free (control_data);
     control->user_data = NULL;

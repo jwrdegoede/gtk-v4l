@@ -21,6 +21,8 @@
  */
 
 #include <fcntl.h>
+#include <errno.h>
+#include <string.h>
 #include <libv4l2.h>
 #include <linux/videodev2.h>
 #include "gtk-v4l-control.h"
@@ -40,6 +42,7 @@ enum
 
 struct _Gtkv4lDevicePrivate {
   GList *controls;
+  GIOChannel *channel;
 };
 
 /* will create gtk_v4l_device_get_type and set gtk_v4l_device_parent_class */
@@ -163,6 +166,9 @@ gtk_v4l_device_finalize (GObject *object)
   g_list_foreach (self->priv->controls, gtk_v4l_device_free_control, NULL);
   g_list_free (self->priv->controls);
 
+  if (self->priv->channel)
+    g_io_channel_unref (self->priv->channel);
+
   if (self->fd != -1)
     close (self->fd);
 
@@ -246,10 +252,44 @@ gtk_v4l_device_fixup_control_flags (gpointer data, gpointer user_data)
   gtk_v4l_control_fixup_flags (control);
 }
 
+static gboolean
+gtk_v4l_device_ctrl_event(GIOChannel *source, GIOCondition condition,
+                          gpointer user_data)
+{
+  Gtkv4lDevice *self = user_data;
+  struct v4l2_event ev;
+  Gtkv4lControl *control;
+
+  if (v4l2_ioctl(self->fd, VIDIOC_DQEVENT, &ev) < 0) {
+    g_warning ("Error dequeing event for device '%s': %s",
+               self->card, strerror(errno));
+    return TRUE;
+  }
+
+  if (ev.type != V4L2_EVENT_CTRL)
+    return TRUE;
+
+  control = gtk_v4l_device_get_control_by_id (self, ev.id);
+  if (!control) {
+    g_warning ("Could not find control id: 0x%08x for device '%s'",
+               ev.id, self->card);
+    return TRUE;
+  }
+
+  gtk_v4l_control_ctrl_event (control, ev.u.ctrl.flags, ev.u.ctrl.value);
+
+  return TRUE;
+}
+
 static void
 gtk_v4l_device_new_control (Gtkv4lDevice *self, struct v4l2_queryctrl *query)
 {
+  int r;
   Gtkv4lControl *control;
+  struct v4l2_event_subscription sub = {
+    .type = V4L2_EVENT_CTRL,
+    .id   = query->id,
+  };
 
   if (query->flags & V4L2_CTRL_FLAG_DISABLED)
     return;
@@ -259,6 +299,13 @@ gtk_v4l_device_new_control (Gtkv4lDevice *self, struct v4l2_queryctrl *query)
                           "query_result", query,
                           NULL);
   self->priv->controls = g_list_append (self->priv->controls, control);
+
+  r = v4l2_ioctl(self->fd, VIDIOC_SUBSCRIBE_EVENT, &sub);
+  if (r >= 0 && !self->priv->channel) {
+    self->priv->channel = g_io_channel_unix_new (self->fd);
+    g_io_add_watch (self->priv->channel, G_IO_PRI, gtk_v4l_device_ctrl_event,
+                    self);
+  }
 }
 
 GList *
@@ -331,4 +378,9 @@ void gtk_v4l_device_update_controls (Gtkv4lDevice *self)
      upon the value of other controls) */
   g_list_foreach (self->priv->controls, gtk_v4l_device_update_control, NULL);
   g_list_foreach (self->priv->controls, gtk_v4l_device_fixup_control_flags, NULL);
+}
+
+gboolean gtk_v4l_device_supports_ctrl_events (Gtkv4lDevice *self)
+{
+  return self->priv->channel;
 }

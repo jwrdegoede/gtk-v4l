@@ -61,7 +61,10 @@ struct _Gtkv4lControlClass {
   /* signals */
   /* Called when an io error happens */
   void (*io_error) (Gtkv4lControl *control, const gchar *error_msg);
-  /* Called when a control with the V4L2_CTRL_FLAG_UPDATE flag set gets set */
+  /* Called when a control event gets received for this control */
+  void (*control_needs_update) (Gtkv4lControl *control);
+  /* Called when a control with the V4L2_CTRL_FLAG_UPDATE flag set gets set
+     on a device which not support ctrl events */
   void (*controls_need_update) (Gtkv4lControl *control);
 };
 
@@ -79,5 +82,8 @@ void gtk_v4l_control_update (Gtkv4lControl *self);
 /* This adds certain fixed flags to controls based on their CID, as some
    drivers (esp in older kernels) don't properly report these flags. */
 void gtk_v4l_control_fixup_flags (Gtkv4lControl *self);
+
+/* Set flags and value from a ctrl event */
+void gtk_v4l_control_ctrl_event (Gtkv4lControl *self, gint flags, gint value);
 
 #endif
