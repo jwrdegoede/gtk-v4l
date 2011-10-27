@@ -99,6 +99,8 @@ static void
 gtk_v4l_widget_set_widget_value (Gtkv4lControl *control, gint value)
 {
   Gtkv4lWidgetControlData *control_data = control->user_data;
+  GList *elem;
+  int i;
 
   switch (control->type) {
   case V4L2_CTRL_TYPE_INTEGER:
@@ -110,7 +112,14 @@ gtk_v4l_widget_set_widget_value (Gtkv4lControl *control, gint value)
                                   value);
     break;
   case V4L2_CTRL_TYPE_MENU:
-    gtk_combo_box_set_active (GTK_COMBO_BOX (control_data->widget), value);
+    for (elem = g_list_first (control->menu_entries), i = 0;
+         elem; elem = g_list_next (elem), i++) {
+      Gtkv4lControlMenuEntry *entry = elem->data;
+      if (entry->value == value) {
+        gtk_combo_box_set_active (GTK_COMBO_BOX (control_data->widget), i);
+        break;
+      }
+    }
     break;
   case V4L2_CTRL_TYPE_BUTTON:
     /* do nothing */
@@ -265,9 +274,24 @@ gtk_v4l_widget_create_bool_widget (Gtkv4lControl *control)
 void menu_control_changed_cb (GtkWidget *combo, gpointer user_data)
 {
   Gtkv4lControl *control = GTK_V4L_CONTROL (user_data);
-  gint value;
+  GList *elem;
+  gchar *text = gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT(combo));
+  gint value = -1;
 
-  value = gtk_combo_box_get_active(GTK_COMBO_BOX (combo));
+  for (elem = g_list_first (control->menu_entries);
+       elem; elem = g_list_next (elem)) {
+    Gtkv4lControlMenuEntry *entry = elem->data;
+
+    if (!strcmp(text, entry->text)) {
+      value = entry->value;
+      break;
+    }
+  }
+  if (value == -1) {
+    g_warning("Could not find menu '%s' menu entry: '%s'",
+              control->name, text);
+    return;
+  }
   gtk_v4l_control_set (control, value);
   /* Set the widget to what the hardware reports as the actual result */
   gtk_v4l_widget_update_control (control, NULL);
@@ -280,11 +304,13 @@ gtk_v4l_widget_create_menu_widget (Gtkv4lControl *control)
   GtkWidget *combo;
   GList *elem;
 
-  combo = gtk_combo_box_new_text();
+  combo = gtk_combo_box_text_new();
 
   for (elem = g_list_first (control->menu_entries);
-       elem; elem = g_list_next (elem))
-    gtk_combo_box_append_text (GTK_COMBO_BOX(combo), (gchar *) elem->data);
+       elem; elem = g_list_next (elem)) {
+    Gtkv4lControlMenuEntry *entry = elem->data;
+    gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT(combo), entry->text);
+  }
 
   control_data->widget_handler =
     g_signal_connect (G_OBJECT(combo), "changed",

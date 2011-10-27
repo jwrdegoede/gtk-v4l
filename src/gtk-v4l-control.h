@@ -35,6 +35,12 @@
 typedef struct _Gtkv4lControl Gtkv4lControl;
 typedef struct _Gtkv4lControlClass Gtkv4lControlClass;
 typedef struct _Gtkv4lControlPrivate Gtkv4lControlPrivate;
+typedef struct _Gtkv4lControlMenuEntry Gtkv4lControlMenuEntry;
+
+struct _Gtkv4lControlMenuEntry {
+  const gchar *text;
+  gint value;
+};
 
 struct _Gtkv4lControl {
   GObject parent;

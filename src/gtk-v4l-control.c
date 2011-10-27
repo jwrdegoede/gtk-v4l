@@ -203,8 +203,11 @@ gtk_v4l_control_finalize (GObject *object)
   GList *elem;
 
   for (elem = g_list_first (self->menu_entries);
-       elem; elem = g_list_next (elem))
-    g_free (elem->data);
+       elem; elem = g_list_next (elem)) {
+    Gtkv4lControlMenuEntry *entry = elem->data;
+    g_free (entry->text);
+    g_free (entry);
+  }
   g_list_free (self->menu_entries);
 
   g_free (self->name);
@@ -394,11 +397,12 @@ gtk_v4l_control_handle_query_result (Gtkv4lControl *self,
     for (i = 0; i <= self->maximum; i++) {
       qm.index = i;
       if (v4l2_ioctl (self->device->fd, VIDIOC_QUERYMENU, &qm) == 0) {
-        self->menu_entries = g_list_append (self->menu_entries,
-                                            g_strdup ((gchar *)qm.name));
-      } else {
-        self->menu_entries = g_list_append (self->menu_entries,
-                                            g_strdup ("Unknown"));
+        Gtkv4lControlMenuEntry *entry;
+        entry = g_malloc (sizeof (*entry));
+        entry->text = g_strdup ((gchar *)qm.name);
+        entry->value = i;
+        self->menu_entries = g_list_append (self->menu_entries, entry);
+      } else if (errno != EINVAL) {
         g_warning ("Unable to get menu text for %s index %d", self->name, i);
       }
     }
