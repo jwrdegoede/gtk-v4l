@@ -16,8 +16,8 @@ AM_PROG_CC_C_O
 AC_CHECK_HEADERS([fcntl.h stdlib.h string.h sys/ioctl.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
-GTK_REQUIRED=2.14
-PKG_CHECK_MODULES([GTK],[gtk+-2.0 >= $GTK_REQUIRED glib-2.0])
+GTK_REQUIRED=3.0
+PKG_CHECK_MODULES([GTK],[gtk+-3.0 >= $GTK_REQUIRED glib-2.0])
 PKG_CHECK_MODULES([V4L], [libv4l2 >= 0.6])
 PKG_CHECK_MODULES([GUDEV],[gudev-1.0 >= 151])
 
