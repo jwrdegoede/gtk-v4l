@@ -1,26 +1,13 @@
 bin_PROGRAMS = gtk-v4l
-gtk_v4l_SOURCES = gtk-v4l.c \
-		  gtk-v4l-control.c \
-		  gtk-v4l-control.h \
-		  gtk-v4l-device.c \
-		  gtk-v4l-device.h \
-		  gtk-v4l-device-list.c \
-		  gtk-v4l-device-list.h \
-		  gtk-v4l-widget.c \
-		  gtk-v4l-widget.h
-gtk_v4l_CFLAGS = \
-        $(GTK_CFLAGS)        \
-        $(V4L_CFLAGS)     \
-	$(GUDEV_CFLAGS)	  \
-        $(WARN_CFLAGS)          \
-        $(AM_CFLAGS)
 
-gtk_v4l_LDFLAGS = \
-        $(AM_LDFLAGS)
+gtk_v4l_SOURCES = gtk-v4l.c
 
-gtk_v4l_LDADD = \
-        $(GTK_LIBS)          \
-        $(V4L_LIBS)       \
-	$(GUDEV_LIBS) 
+gtk_v4l_LDADD = $(top_builddir)/lib/libgtkv4l.la \
+	        $(GTK_LIBS) \
+	        $(GUDEV_LIBS)\
+		$(V4L_LIBS)
 
-
+gtk_v4l_CFLAGS = -I$(top_srcdir)/lib \
+		  $(GTK_CFLAGS) \
+		  $(GUDEV_CFLAGS) \
+		  $(V4L_CFLAGS)

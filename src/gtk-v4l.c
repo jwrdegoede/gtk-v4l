@@ -18,8 +18,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "gtk-v4l-widget.h"
-#include "gtk-v4l-device-list.h"
+#include <gtk-v4l-widget.h>
+#include <gtk-v4l-device-list.h>
 
 #define ICON_LOC "/usr/share/icons/gnome/24x24/devices/camera-web.png"
 

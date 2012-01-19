@@ -11,6 +11,7 @@ AC_CONFIG_HEADERS([config.h])
 #AC_PROG_CC
 AM_PROG_CC_C_O
 # Checks for libraries.
+AM_PROG_LIBTOOL
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h stdlib.h string.h sys/ioctl.h unistd.h])
@@ -39,7 +40,8 @@ AC_SUBST([AM_LDFLAGS])
 # Checks for library functions.
 AC_CHECK_FUNCS([strerror])
 
-AC_CONFIG_FILES([Makefile
-		src/Makefile
-		gtk-v4l.desktop])
+AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([lib/Makefile])
+AC_CONFIG_FILES([src/Makefile])
+AC_CONFIG_FILES([gtk-v4l.desktop])
 AC_OUTPUT
