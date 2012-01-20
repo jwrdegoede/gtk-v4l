@@ -1,5 +1,8 @@
 lib_LTLIBRARIES = libgtkv4l.la
 
+include_HEADERS = gtk-v4l-widget.h \
+		  gtk-v4l-device-list.h
+
 libgtkv4l_la_CFLAGS = \
         $(GTK_CFLAGS)        \
         $(V4L_CFLAGS)     \
