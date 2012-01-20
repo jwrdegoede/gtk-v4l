@@ -8,7 +8,10 @@ libgtkv4l_la_CFLAGS = \
         $(AM_CFLAGS)
 
 libgtkv4l_la_LDFLAGS = \
-        $(AM_LDFLAGS)
+        $(AM_LDFLAGS)\
+	$(GTK_LIBS) \
+	$(V4L_LIBS) \
+	$(GUDEV_LIBS)
 
 libgtkv4l_la_LIBDADD = \
         $(GTK_LIBS)          \
