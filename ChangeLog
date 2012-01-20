@@ -1,3 +1,9 @@
+Version 0.4
+* Jan 20 2012
+- Add support for control events
+- Add GTK3 support
+- Split package into libs and bin
+
 Version 0.3
 * Jun 2 2010
 - Add udev support

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT(gtk-v4l, 0.3, sidhpurwala.huzaifa@gmail.com)
+AC_INIT(gtk-v4l, 0.4, sidhpurwala.huzaifa@gmail.com)
 AM_INIT_AUTOMAKE([-Wall -Werror])
 AC_CONFIG_SRCDIR([src/gtk-v4l.c])
 AC_CONFIG_HEADERS([config.h])
