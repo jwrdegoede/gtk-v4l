@@ -43,6 +43,7 @@ enum
 struct _Gtkv4lDevicePrivate {
   GList *controls;
   GIOChannel *channel;
+  guint channel_source_id;
 };
 
 /* will create gtk_v4l_device_get_type and set gtk_v4l_device_parent_class */
@@ -166,8 +167,10 @@ gtk_v4l_device_finalize (GObject *object)
   g_list_foreach (self->priv->controls, gtk_v4l_device_free_control, NULL);
   g_list_free (self->priv->controls);
 
-  if (self->priv->channel)
+  if (self->priv->channel) {
+    g_source_remove (self->priv->channel_source_id);
     g_io_channel_unref (self->priv->channel);
+  }
 
   if (self->fd != -1)
     close (self->fd);
@@ -303,8 +306,9 @@ gtk_v4l_device_new_control (Gtkv4lDevice *self, struct v4l2_queryctrl *query)
   r = v4l2_ioctl(self->fd, VIDIOC_SUBSCRIBE_EVENT, &sub);
   if (r >= 0 && !self->priv->channel) {
     self->priv->channel = g_io_channel_unix_new (self->fd);
-    g_io_add_watch (self->priv->channel, G_IO_PRI, gtk_v4l_device_ctrl_event,
-                    self);
+    self->priv->channel_source_id =
+      g_io_add_watch (self->priv->channel, G_IO_PRI, gtk_v4l_device_ctrl_event,
+                      self);
   }
 }
 
