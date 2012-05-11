@@ -7,4 +7,4 @@ Terminal=false
 Type=Application
 StartupNotify=true
 Icon=camera-web
-Categories=GNOME;Application;AudioVideo;Video;
+Categories=GNOME;AudioVideo;Video;
