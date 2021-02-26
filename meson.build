@@ -1,4 +1,4 @@
-project('gtk-v4l', 'c', version:'0.5.0')
+project('gtk-v4l', 'c', version:'0.5.0', meson_version:'>=0.50')
 
 i18n = import ('i18n')
 
