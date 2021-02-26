@@ -1,0 +1,41 @@
+os:
+  - linux
+arch:
+  - amd64
+  - ppc64le
+language: c
+
+compiler:
+  - gcc
+  - clang
+
+jobs:
+  allow_failures:
+
+dist: bionic
+
+addons:
+  apt:
+    packages:
+      - libgudev-1.0-dev
+      - libgtk-3-dev
+      - libv4l-dev
+      - intltool
+      - gtk-doc-tools
+      - python3-pip
+      - python3-dev
+      - ninja-build
+      - gobject-introspection
+      - valgrind
+    update: true
+
+before_install:
+  - sudo pip3 install --upgrade setuptools pip
+  - sudo pip3 install 'meson==0.50'
+
+
+script:
+  - meson build
+  - cd build
+  - meson configure
+  - ninja
