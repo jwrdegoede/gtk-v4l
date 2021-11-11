@@ -17,7 +17,7 @@
 #include <gtk-v4l-widget.h>
 #include <gtk-v4l-device-list.h>
 
-#define ICON_LOC "/usr/share/icons/gnome/24x24/devices/camera-web.png"
+#define ICON_LOC "/usr/share/icons/Adwaita/24x24/legacy/camera-web.png"
 
 GtkTable *main_table = NULL;
 GtkWidget *controls = NULL;
