@@ -121,26 +121,45 @@ gtk_v4l_device_constructor (GType                  gtype,
 
   /* update the object state depending on constructor properties */
   self = GTK_V4L_DEVICE (obj);
-  self->fd = v4l2_open(self->device_file, O_RDWR);
-  if (self->fd == -1) {
-    g_warning ("Could not open device file: '%s'", self->device_file);
-    return obj;
+  if (strncmp(self->device_file, "/dev/v4l-subdev", 15) == 0) {
+    self->fd = open(self->device_file, O_RDWR);
+    if (self->fd == -1) {
+      g_warning ("Could not open device file: '%s'", self->device_file);
+      return obj;
+    }
+
+    /* v4l-subdev-s do not support VIDIOC_QUERYCAP */
+    self->card    = g_strdup(self->device_file);
+    self->driver  = g_strdup("");
+    self->bus_info = g_strdup("");
+    self->version = g_strdup("");
+  } else {
+    self->fd = v4l2_open(self->device_file, O_RDWR);
+    if (self->fd == -1) {
+      g_warning ("Could not open device file: '%s'", self->device_file);
+      return obj;
+    }
+
+    if (v4l2_ioctl (self->fd, VIDIOC_QUERYCAP, &cap) == -1) {
+      g_warning ("Device '%s' is not a v4l2 device", self->device_file);
+      v4l2_close (self->fd);
+      self->fd = -1;
+      return obj;
+    }
+    self->driver  = g_strdup((gchar *)cap.driver);
+    self->card    = g_strdup((gchar *)cap.card);
+    self->bus_info = g_strdup((gchar *)cap.bus_info);
+    self->version = g_strdup_printf("%d.%d.%d",
+				  (cap.version >> 16) & 0xff,
+				  (cap.version >>  8) & 0xff,
+				  (cap.version >>  0) & 0xff);
   }
 
-  if (v4l2_ioctl (self->fd, VIDIOC_QUERYCAP, &cap) == -1) {
-    g_warning ("Device '%s' is not a v4l2 device", self->device_file);
+  /* Skip devices which don't have any controls */
+  if (!gtk_v4l_device_get_controls (self)) {
     v4l2_close (self->fd);
     self->fd = -1;
-    return obj;
   }
-  
-  self->driver  = g_strdup((gchar *)cap.driver);
-  self->card    = g_strdup((gchar *)cap.card);
-  self->bus_info = g_strdup((gchar *)cap.bus_info);
-  self->version = g_strdup_printf("%d.%d.%d",
-                                  (cap.version >> 16) & 0xff, 
-                                  (cap.version >>  8) & 0xff, 
-                                  (cap.version >>  0) & 0xff);
 
   return obj;
 }
