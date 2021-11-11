@@ -201,7 +201,7 @@ gtk_v4l_control_finalize (GObject *object)
   for (elem = g_list_first (self->menu_entries);
        elem; elem = g_list_next (elem)) {
     Gtkv4lControlMenuEntry *entry = elem->data;
-    g_free (entry->text);
+    g_free ((void *)entry->text);
     g_free (entry);
   }
   g_list_free (self->menu_entries);
