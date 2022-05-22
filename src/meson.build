@@ -2,8 +2,7 @@ executable('gtk-v4l', 'gtk-v4l.c', link_with:gtkv4l_lib, install: true, dependen
 
 po_dir = join_paths (meson.source_root (), 'po')
 
-desktop = i18n.merge_file ('desktop',
-			   input:'gtk-v4l.desktop.in',
+desktop = i18n.merge_file (input:'gtk-v4l.desktop.in',
 			   output:'gtk-v4l.desktop',
 			   install:true,
 			   install_dir:get_option('datadir') / 'applications',
