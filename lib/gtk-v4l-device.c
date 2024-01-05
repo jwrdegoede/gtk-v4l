@@ -401,5 +401,5 @@ void gtk_v4l_device_update_controls (Gtkv4lDevice *self)
 
 gboolean gtk_v4l_device_supports_ctrl_events (Gtkv4lDevice *self)
 {
-  return self->priv->channel;
+  return self->priv->channel != NULL;
 }
