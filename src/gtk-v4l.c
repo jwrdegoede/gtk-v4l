@@ -68,7 +68,7 @@ v4l2_combo_add_device(Gtkv4lDeviceList *devlist,
   gint active;
   GtkComboBox *combo = GTK_COMBO_BOX(user_data);
 
-  gtk_combo_box_text_insert_text (combo, idx, device->card);
+  gtk_combo_box_text_insert_text (GTK_COMBO_BOX_TEXT (combo), idx, device->card);
   active = gtk_combo_box_get_active (combo);
   if (active == -1)
   {
@@ -88,7 +88,7 @@ v4l2_combo_remove_device(Gtkv4lDeviceList *devlist,
   /* If this removes the current device
      v4l2_combo_change_device_cb() will get called and that will
      handle selecting a new device. */
-  gtk_combo_box_text_remove (combo, idx);
+  gtk_combo_box_text_remove (GTK_COMBO_BOX_TEXT (combo), idx);
   if ((gtk_tree_model_iter_n_children( gtk_combo_box_get_model (combo),NULL)) == 0)
     gtk_widget_set_sensitive (default_button, FALSE);
 }
